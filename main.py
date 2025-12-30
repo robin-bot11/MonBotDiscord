@@ -1,41 +1,23 @@
 import os
-import threading
 import discord
 from discord.ext import commands
 from flask import Flask
+import threading
 
-# =========================
-# Flask (pour Render / UptimeRobot)
-# =========================
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "MonBotDiscord est en ligne ✅"
+    return "Bot en ligne ✅"
 
 def run_flask():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=8080)
 
 threading.Thread(target=run_flask, daemon=True).start()
 
-# =========================
-# Bot Discord
-# =========================
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="+", intents=intents)
 
-# =========================
-# Token (VARIABLE D’ENVIRONNEMENT)
-# =========================
-TOKEN = os.getenv("DISCORD_TOKEN")
-
-if not TOKEN:
-    raise RuntimeError("DISCORD_TOKEN manquant dans les variables Render")
-
-# =========================
-# Chargement des cogs
-# =========================
 cogs = [
     "moderation",
     "fun",
@@ -48,17 +30,18 @@ cogs = [
 ]
 
 @bot.event
+async def setup_hook():
+    for cog in cogs:
+        await bot.load_extension(cog)
+        print(f"{cog} chargé ✅")
+
+@bot.event
 async def on_ready():
-    print(f"✅ {bot.user} connecté avec succès")
+    print(f"{bot.user} prêt 🚀")
 
-for cog in cogs:
-    try:
-        bot.load_extension(cog)
-        print(f"✔ {cog} chargé")
-    except Exception as e:
-        print(f"❌ Erreur cog {cog} : {e}")
+TOKEN = os.getenv("DISCORD_TOKEN")
 
-# =========================
-# Lancement du bot
-# =========================
+if not TOKEN:
+    raise RuntimeError("DISCORD_TOKEN manquant")
+
 bot.run(TOKEN)
