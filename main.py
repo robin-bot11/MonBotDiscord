@@ -1,8 +1,8 @@
+import os
 import discord
 from discord.ext import commands
 from flask import Flask
 import threading
-import os
 
 # --- Serveur Flask pour Render / UptimeRobot ---
 app = Flask("")
@@ -21,11 +21,10 @@ threading.Thread(target=run_flask).start()
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="+", intents=intents)
 
-# --- Récupérer le token depuis la variable d'environnement ---
+# --- Token du bot depuis la variable d'environnement ---
 TOKEN = os.getenv("DISCORD_TOKEN")
 if not TOKEN:
-    print("Erreur : la variable d'environnement DISCORD_TOKEN n'est pas définie !")
-    exit(1)
+    raise ValueError("Le token Discord n'a pas été trouvé ! Assure-toi que DISCORD_TOKEN est défini dans Render.")
 
 # --- Charger les cogs ---
 cogs = [
