@@ -1,48 +1,64 @@
+import os
+import threading
 import discord
 from discord.ext import commands
 from flask import Flask
-import threading
 
-# --- Serveur Flask pour Render / UptimeRobot ---
-app = Flask("")
+# =========================
+# Flask (pour Render / UptimeRobot)
+# =========================
+app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "MonBotDiscord est en ligne !"
+    return "MonBotDiscord est en ligne ✅"
 
 def run_flask():
-    app.run(host="0.0.0.0", port=8080)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
 
-threading.Thread(target=run_flask).start()
+threading.Thread(target=run_flask, daemon=True).start()
 
-# --- Intents et bot Discord ---
+# =========================
+# Bot Discord
+# =========================
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="+", intents=intents)
 
-# --- Token du bot ---
-TOKEN = "MTQ1NDU2NjYzOTg5Mzc0MTgwMQ.G3GYkC.IokuiTjXwnuPlUz-gILZTBpoGRRhe1QSF-a33s"  # <-- Mets ton vrai token entre les guillemets
+# =========================
+# Token (VARIABLE D’ENVIRONNEMENT)
+# =========================
+TOKEN = os.getenv("DISCORD_TOKEN")
 
-# --- Charger les cogs ---
+if not TOKEN:
+    raise RuntimeError("DISCORD_TOKEN manquant dans les variables Render")
+
+# =========================
+# Chargement des cogs
+# =========================
 cogs = [
-    "moderation",  
-    "fun",         
-    "giveaway",    
-    "welcome",     
-    "rules",       
-    "logs",        
-    "lock",        
-    "snipe"        
+    "moderation",
+    "fun",
+    "giveaway",
+    "welcome",
+    "rules",
+    "logs",
+    "lock",
+    "snipe"
 ]
+
+@bot.event
+async def on_ready():
+    print(f"✅ {bot.user} connecté avec succès")
 
 for cog in cogs:
     try:
         bot.load_extension(cog)
-        print(f"{cog} chargé ✅")
+        print(f"✔ {cog} chargé")
     except Exception as e:
-        print(f"Erreur en chargeant {cog} : {e}")
+        print(f"❌ Erreur cog {cog} : {e}")
 
-@bot.event
-async def on_ready():
-    print(f"{bot.user} est connecté et prêt !")
-
+# =========================
+# Lancement du bot
+# =========================
 bot.run(TOKEN)
