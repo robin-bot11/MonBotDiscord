@@ -1,0 +1,15 @@
+from discord.ext import commands
+
+class Welcome(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member):
+        channel = member.guild.system_channel
+        if channel:
+            await channel.send(f"Souhaitez la bienvenue à {member.mention} sur **Aphoria !**\n"
+                               f"<:aphoria:1447670998437462096> Nous sommes maintenant {member.guild.member_count} sur le serveur !!")
+
+def setup(bot):
+    bot.add_cog(Welcome(bot))
