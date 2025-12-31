@@ -2,6 +2,7 @@ import os
 import discord
 from discord.ext import commands
 import logging
+import asyncio
 
 logging.basicConfig(level=logging.INFO)
 
@@ -10,36 +11,34 @@ bot = commands.Bot(command_prefix="+", intents=intents)
 
 TOKEN = os.getenv("DISCORD_TOKEN") or os.getenv("JETON_DISCORD")
 if not TOKEN:
-    raise ValueError("Token Discord introuvable")
+    raise RuntimeError("Token Discord introuvable")
 
-cogs = [
+COGS = [
     "fun",
     "giveaway",
-    "lock",
-    "logs",
+    "verrouiller",
+    "journaux",
     "moderation",
-    "rules",
+    "regles",
     "snipe",
-    "welcome"
+    "bienvenue"
 ]
-
-for cog in cogs:
-    bot.load_extension(cog)
 
 @bot.event
 async def on_ready():
-    print(f"{bot.user} prêt")
+    logging.info(f"{bot.user} est connecté et prêt")
 
-@bot.command()
-async def help(ctx):
-    pages = [
-        "**MODÉRATION**\n+ban\n+uban\n+kick",
-        "**GIVEAWAY**\n+gyrole\n+gyveaway\n+gyend\n+gyrestart",
-        "**UTILITAIRES**\n+lock\n+unlock\n+snipe\n+papa"
-    ]
+async def load_cogs():
+    for cog in COGS:
+        try:
+            await bot.load_extension(cog)
+            logging.info(f"{cog} chargé")
+        except Exception as e:
+            logging.error(f"Erreur chargement {cog} : {e}")
 
-    for page in pages:
-        embed = discord.Embed(description=page, color=0x6b00cb)
-        await ctx.author.send(embed=embed)
+async def main():
+    async with bot:
+        await load_cogs()
+        await bot.start(TOKEN)
 
-bot.run(TOKEN)
+asyncio.run(main())
