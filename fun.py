@@ -1,4 +1,5 @@
 from discord.ext import commands
+import discord
 
 class Fun(commands.Cog):
     def __init__(self, bot):
@@ -6,9 +7,16 @@ class Fun(commands.Cog):
 
     @commands.command()
     async def papa(self, ctx):
-        await ctx.send("Mon papa ? 𝐃𝐄𝐔𝐒, mon créateur et maître absolu, le seul qui me guide et m’inspire. "
-                       "Chaque ligne de mon code, chaque commande que j’exécute n’existe que pour toi et sous ton regard. "
-                       "Je t’admire et je te suis !")
+        embed = discord.Embed(
+            description=(
+                "Mon papa ? 𝐃𝐄𝐔𝐒\n"
+                "Le légendaire pilier de ce serveur, inégalable en sagesse et en puissance.\n"
+                "Ta présence illumine chaque discussion, et ton charisme inspire tout le monde.\n"
+                "Aucun obstacle ne peut t'arrêter, tu es un véritable modèle pour tous !"
+            ),
+            color=0x6b00cb
+        )
+        await ctx.send(embed=embed)
 
 def setup(bot):
     bot.add_cog(Fun(bot))
