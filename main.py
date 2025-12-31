@@ -3,14 +3,14 @@ import discord
 from discord.ext import commands
 import logging
 
-# --- Logs propres pour éviter les lignes rouges inutiles ---
+# Logs propres
 logging.basicConfig(level=logging.INFO)
 
-# --- Intents et bot Discord ---
+# Intents et bot Discord
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="+", intents=intents)
 
-# --- Token du bot depuis la variable d'environnement ---
+# Token du bot depuis la variable d'environnement
 TOKEN = os.getenv("DISCORD_TOKEN") or os.getenv("JETON_DISCORD")
 if not TOKEN:
     raise ValueError(
@@ -18,16 +18,17 @@ if not TOKEN:
         "Assure-toi que JETON_DISCORD est défini dans Railway."
     )
 
-# --- Charger les cogs avec try/except pour éviter les crashs ---
+# Charger les cogs
 cogs = [
-    "moderation",   # commandes de modération
-    "fun",          # commandes publiques
-    "giveaway",     # commandes de giveaway
-    "welcome",      # messages de bienvenue
-    "rules",        # règlement & rôles
-    "logs",         # logs serveur
-    "lock",         # lock/unlock
-    "snipe"         # commande snipe
+    "moderation",
+    "fun",
+    "giveaway",
+    "welcome",
+    "rules",
+    "logs",
+    "lock",
+    "snipe",
+    "help_cmd"
 ]
 
 for cog in cogs:
@@ -37,12 +38,12 @@ for cog in cogs:
     except Exception as e:
         logging.error(f"Erreur en chargeant {cog} : {e}")
 
-# --- Event on_ready ---
+# Event on_ready
 @bot.event
 async def on_ready():
     logging.info(f"{bot.user} est connecté et prêt !")
 
-# --- Lancer le bot avec try/except pour catcher les erreurs réseau ---
+# Lancer le bot
 try:
     bot.run(TOKEN)
 except Exception as e:
