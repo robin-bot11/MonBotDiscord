@@ -18,7 +18,7 @@ class Help(commands.Cog):
             color=COLOR
         )
 
-        # --- Modération ---
+        # Modération
         embed.add_field(
             name="Modération",
             value=(
@@ -29,12 +29,12 @@ class Help(commands.Cog):
                 "+umute <ID>\n"
                 "+warn <ID> <raison>\n"
                 "+warns <ID>\n"
-                "+delwarn <ID>"
+                "+delwarn <ID> <numéro warn>"
             ),
             inline=False
         )
 
-        # --- Giveaway ---
+        # Giveaway
         embed.add_field(
             name="Giveaway",
             value=(
@@ -46,14 +46,14 @@ class Help(commands.Cog):
             inline=False
         )
 
-        # --- Autres commandes ---
+        # Autres commandes
         embed.add_field(
             name="Autres",
-            value="+papa\n+snipe",
+            value="+papa\n+snipe\n+reglement",
             inline=False
         )
 
-        # --- Commandes propriétaire ---
+        # Commandes propriétaire
         if is_owner:
             embed.add_field(
                 name="Propriétaire",
@@ -69,7 +69,6 @@ class Help(commands.Cog):
                 inline=False
             )
 
-        # --- Envoi du MP ---
         try:
             await ctx.author.send(embed=embed)
             await ctx.reply("La liste des commandes a été envoyée en message privé.")
