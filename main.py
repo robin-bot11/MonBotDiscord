@@ -7,11 +7,12 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="+", intents=intents)
 
 # --- Token du bot depuis la variable d'environnement ---
-TOKEN = os.getenv("DISCORD_TOKEN")
+# Sur Railway, le vrai nom de la variable est JETON_DISCORD
+TOKEN = os.getenv("DISCORD_TOKEN") or os.getenv("JETON_DISCORD")
 if not TOKEN:
     raise ValueError(
         "Le token Discord n'a pas été trouvé ! "
-        "Assure-toi que DISCORD_TOKEN est défini dans Railway."
+        "Assure-toi que JETON_DISCORD est défini dans Railway."
     )
 
 # --- Charger les cogs ---
