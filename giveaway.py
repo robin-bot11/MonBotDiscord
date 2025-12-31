@@ -1,46 +1,25 @@
 from discord.ext import commands
-import discord
-
-COLOR = 0x6b00cb
 
 class Giveaway(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.allowed_roles = []
 
     @commands.command()
-    async def gyrole(self, ctx, role: discord.Role):
-        self.allowed_roles.append(role.id)
-        embed = discord.Embed(
-            description=f"Rôle autorisé pour les giveaways : {role.mention}",
-            color=COLOR
-        )
-        await ctx.send(embed=embed)
+    @commands.has_permissions(administrator=True)
+    async def gyrole(self, ctx, role: commands.RoleConverter):
+        await ctx.send(f"Rôle autorisé aux giveaways : {role.name}")
 
     @commands.command()
-    async def gyveaway(self, ctx, duration, *, reward):
-        embed = discord.Embed(
-            title="🎉 Giveaway lancé",
-            description=f"Durée : **{duration}**\nRécompense : **{reward}**",
-            color=COLOR
-        )
-        await ctx.send(embed=embed)
+    async def gyveaway(self, ctx, durée, *, récompense):
+        await ctx.send(f"Giveaway lancé pour {durée} : {récompense}")
 
     @commands.command()
-    async def gyend(self, ctx, giveaway_id):
-        embed = discord.Embed(
-            description=f"Giveaway `{giveaway_id}` terminé.",
-            color=COLOR
-        )
-        await ctx.send(embed=embed)
+    async def gyend(self, ctx, giveaway_id: int):
+        await ctx.send(f"Giveaway {giveaway_id} terminé")
 
     @commands.command()
-    async def gyrestart(self, ctx, giveaway_id):
-        embed = discord.Embed(
-            description=f"Giveaway `{giveaway_id}` relancé.",
-            color=COLOR
-        )
-        await ctx.send(embed=embed)
+    async def gyrestart(self, ctx, giveaway_id: int):
+        await ctx.send(f"Giveaway {giveaway_id} relancé")
 
 def setup(bot):
     bot.add_cog(Giveaway(bot))
