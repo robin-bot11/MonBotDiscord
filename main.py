@@ -57,3 +57,7 @@ async def main():
 
 # --- Lancement du bot ---
 asyncio.run(main())
+@bot.event
+async def on_message(message):
+    print("RECU :", message.content)
+    await bot.process_commands(message)
