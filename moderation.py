@@ -1,24 +1,25 @@
+# moderation.py
 from discord.ext import commands
 import discord
 from datetime import datetime
+from database import Database
 
 COLOR = 0x6b00cb
 
 class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.warns = {}  # stocke les warns par ID de membre : {id: [{"raison":..., "moderateur":..., "date":...}, ...]}
+        self.db = Database()  # On utilise la base pour stocker les warns
 
     # ------------------ KICK ------------------
     @commands.command()
     @commands.has_permissions(kick_members=True)
     async def kick(self, ctx, member_id: int, *, reason=None):
-        guild = ctx.guild
-        member = guild.get_member(member_id)
+        member = ctx.guild.get_member(member_id)
         if not member:
             return await ctx.send("Membre introuvable avec cet ID.")
         try:
-            await member.send(f"Vous avez été expulsé de {guild.name}. Raison : {reason}")
+            await member.send(f"Vous avez été expulsé de {ctx.guild.name}. Raison : {reason}")
         except:
             pass
         await member.kick(reason=reason)
@@ -28,12 +29,11 @@ class Moderation(commands.Cog):
     @commands.command()
     @commands.has_permissions(ban_members=True)
     async def ban(self, ctx, member_id: int, *, reason=None):
-        guild = ctx.guild
-        member = guild.get_member(member_id)
+        member = ctx.guild.get_member(member_id)
         if not member:
             return await ctx.send("Membre introuvable avec cet ID.")
         try:
-            await member.send(f"Vous avez été banni de {guild.name}. Raison : {reason}")
+            await member.send(f"Vous avez été banni de {ctx.guild.name}. Raison : {reason}")
         except:
             pass
         await member.ban(reason=reason)
@@ -91,11 +91,8 @@ class Moderation(commands.Cog):
         member = ctx.guild.get_member(member_id)
         if not member:
             return await ctx.send("Membre introuvable avec cet ID.")
-        self.warns.setdefault(member_id, []).append({
-            "raison": reason,
-            "moderateur": ctx.author.name,
-            "date": datetime.utcnow().strftime("%Y-%m-%d")
-        })
+        date = datetime.utcnow().strftime("%Y-%m-%d")
+        self.db.add_warn(member_id, reason, ctx.author.name, date)
         try:
             await member.send(f"Vous avez reçu un avertissement sur {ctx.guild.name}. Raison : {reason}")
         except:
@@ -108,23 +105,24 @@ class Moderation(commands.Cog):
         member = ctx.guild.get_member(member_id)
         if not member:
             return await ctx.send("Membre introuvable avec cet ID.")
-        data = self.warns.get(member_id, [])
+        data = self.db.get_warns(member_id)
         if not data:
             return await ctx.send(f"{member.display_name} n'a aucun avertissement.")
         msg = f"Warns de {member.display_name} :\n"
         for i, w in enumerate(data, start=1):
-            msg += f"{i} - {w['raison']} - par {w['moderateur']} - {w['date']}\n"
+            msg += f"{i} - {w['reason']} - par {w['staff']} - {w['date']}\n"
         await ctx.send(msg)
 
     # ------------------ SUPPRIMER UN WARN ------------------
     @commands.command()
     @commands.has_permissions(manage_messages=True)
     async def delwarn(self, ctx, member_id: int, warn_number: int):
-        data = self.warns.get(member_id, [])
-        if not data or warn_number > len(data) or warn_number < 1:
-            return await ctx.send("Aucun warn correspondant trouvé.")
-        removed = data.pop(warn_number - 1)
-        await ctx.send(f"J'ai supprimé le warn {warn_number} de {removed['raison']} pour le membre {ctx.guild.get_member(member_id).mention}.")
+        success = self.db.del_warn(member_id, warn_number - 1)
+        member = ctx.guild.get_member(member_id)
+        if success:
+            await ctx.send(f"J'ai supprimé le warn {warn_number} pour {member.mention}.")
+        else:
+            await ctx.send("Aucun warn correspondant trouvé.")
 
 def setup(bot):
     bot.add_cog(Moderation(bot))
