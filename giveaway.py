@@ -1,76 +1,107 @@
-# giveaway.py
-from discord.ext import commands, tasks
+from discord.ext import commands
 import discord
 import asyncio
-from database import Database
+import random
+from datetime import datetime, timedelta
 
 COLOR = 0x6b00cb
 
 class Giveaway(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.db = Database()
-        self.running_giveaways = {}  # stocke les giveaways en cours {message_id: info}
+        self.active_giveaways = {}  # msg_id : data
+        self.allowed_roles = set()  # rôles autorisés à lancer
 
     @commands.command()
-    @commands.has_permissions(administrator=True)
     async def gyrole(self, ctx, role: discord.Role):
-        """Définir le rôle autorisé à lancer des giveaways"""
-        self.db.set_giveaway_role(ctx.guild.id, role.id)
-        await ctx.send(embed=discord.Embed(
-            description=f"Rôle {role.name} défini pour lancer des giveaways.",
-            color=COLOR
-        ))
+        if not ctx.author.guild_permissions.administrator:
+            return await ctx.send("Vous n'avez pas la permission de définir les rôles autorisés.")
+        self.allowed_roles.add(role.id)
+        await ctx.send(f"Le rôle {role.name} peut maintenant lancer des giveaways.")
 
     @commands.command()
-    async def gyveaway(self, ctx, duration: int, *, prize):
-        """Lancer un giveaway. Durée en minutes."""
-        guild_id = ctx.guild.id
-        role_id = self.db.get_giveaway_role(guild_id)
-        member_roles = [r.id for r in ctx.author.roles]
-        if role_id and role_id not in member_roles:
-            await ctx.send("Vous n'avez pas le rôle autorisé pour lancer un giveaway.")
-            return
+    async def gyveaway(self, ctx, durée: str, *, récompense: str):
+        if not any(r.id in self.allowed_roles for r in ctx.author.roles) and not ctx.author.guild_permissions.administrator:
+            return await ctx.send("Vous n'avez pas la permission de lancer un giveaway.")
+
+        time_seconds = self.convert_duration(durée)
+        if time_seconds <= 0:
+            return await ctx.send("Durée invalide ! Exemple : 1h, 30m")
 
         embed = discord.Embed(
             title="🎉 Giveaway !",
-            description=f"Récompense : {prize}\nDurée : {duration} minutes",
+            description=f"Récompense : {récompense}\nLancé par : {ctx.author.mention}\nDurée : {durée}",
             color=COLOR
         )
-        message = await ctx.send(embed=embed)
-        self.running_giveaways[message.id] = {"prize": prize, "author": ctx.author.id}
+        msg = await ctx.send(embed=embed)
+        self.active_giveaways[msg.id] = {
+            "reward": récompense,
+            "author": ctx.author,
+            "end_time": datetime.utcnow() + timedelta(seconds=time_seconds)
+        }
+        await msg.add_reaction("🎉")
+        await ctx.send(f"Le giveaway pour **{récompense}** est lancé ! Réagissez avec 🎉 pour participer.")
 
-        await asyncio.sleep(duration * 60)
+        self.bot.loop.create_task(self.end_giveaway(msg.id, time_seconds))
 
+    async def end_giveaway(self, msg_id, delay):
+        await asyncio.sleep(delay)
+        giveaway = self.active_giveaways.get(msg_id)
+        if not giveaway:
+            return
+        channel = giveaway['author'].guild.text_channels[0]
+        msg = await channel.fetch_message(msg_id)
+        users = set()
+        for reaction in msg.reactions:
+            if str(reaction.emoji) == "🎉":
+                async for user in reaction.users():
+                    if not user.bot:
+                        users.add(user)
+        if not users:
+            await channel.send("Personne n'a participé au giveaway...")
+            self.active_giveaways.pop(msg_id)
+            return
+
+        gagnant = random.choice(list(users))
+        await channel.send(f"Félicitations {gagnant.mention} ! Tu as gagné : **{giveaway['reward']}** 🎉")
         try:
-            message = await ctx.channel.fetch_message(message.id)
-            users = [r async for r in message.reactions[0].users() if not r.bot]
-            if users:
-                winner = random.choice(users)
-                await ctx.send(f"🎉 Félicitations {winner.mention}, vous avez gagné **{prize}** !")
-            else:
-                await ctx.send("Personne n'a participé au giveaway.")
-            del self.running_giveaways[message.id]
-        except Exception:
+            await gagnant.send(f"Félicitations ! Tu as gagné le giveaway pour **{giveaway['reward']}** sur {channel.guild.name} !")
+        except:
             pass
+        self.active_giveaways.pop(msg_id)
 
     @commands.command()
-    @commands.has_permissions(administrator=True)
-    async def gyend(self, ctx, message_id: int):
-        """Terminer un giveaway avant l'heure"""
+    async def gyend(self, ctx, msg_id: int):
+        if not ctx.author.guild_permissions.administrator:
+            return await ctx.send("Seuls les administrateurs peuvent terminer un giveaway manuellement.")
+        if msg_id not in self.active_giveaways:
+            return await ctx.send("Aucun giveaway actif avec cet ID.")
+        await self.end_giveaway(msg_id, 0)
+        await ctx.send("Le giveaway a été terminé manuellement.")
+
+    @commands.command()
+    async def gyrestart(self, ctx, msg_id: int):
+        if not ctx.author.guild_permissions.administrator:
+            return await ctx.send("Seuls les administrateurs peuvent relancer un giveaway.")
+        if msg_id not in self.active_giveaways:
+            return await ctx.send("Aucun giveaway actif avec cet ID.")
+        durée_restante = (self.active_giveaways[msg_id]['end_time'] - datetime.utcnow()).total_seconds()
+        if durée_restante < 0:
+            durée_restante = 10
+        await ctx.send(f"Le giveaway pour **{self.active_giveaways[msg_id]['reward']}** est relancé !")
+        self.bot.loop.create_task(self.end_giveaway(msg_id, durée_restante))
+
+    def convert_duration(self, durée: str) -> int:
         try:
-            message = await ctx.channel.fetch_message(message_id)
-            await ctx.send(f"Le giveaway pour {self.running_giveaways[message_id]['prize']} est terminé.")
-            del self.running_giveaways[message_id]
-        except KeyError:
-            await ctx.send("Aucun giveaway trouvé avec cet ID.")
-
-    @commands.command()
-    @commands.has_permissions(administrator=True)
-    async def gyrestart(self, ctx, message_id: int):
-        """Relancer un giveaway terminé"""
-        # Ici tu pourrais récupérer les données depuis self.db si tu veux les persister
-        await ctx.send("Cette fonction relance le giveaway (à compléter selon la sauvegarde).")
+            if durée.endswith("h"):
+                return int(durée[:-1]) * 3600
+            elif durée.endswith("m"):
+                return int(durée[:-1]) * 60
+            elif durée.endswith("s"):
+                return int(durée[:-1])
+        except:
+            return 0
+        return 0
 
 def setup(bot):
     bot.add_cog(Giveaway(bot))
