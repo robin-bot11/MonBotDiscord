@@ -1,3 +1,4 @@
+# giveaway.py
 from discord.ext import commands
 import discord
 import asyncio
@@ -103,5 +104,6 @@ class Giveaway(commands.Cog):
             return 0
         return 0
 
-def setup(bot):
-    bot.add_cog(Giveaway(bot))
+# ✅ Correct pour Discord.py 2.x
+async def setup(bot):
+    await bot.add_cog(Giveaway(bot))
