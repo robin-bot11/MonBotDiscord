@@ -10,21 +10,70 @@ class Policy(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def setreglement(self, ctx, title: str, role: discord.Role, button_text: str, emoji: str = None, *, text: str):
-        """
-        Configure le règlement du serveur.
-        Exemple :
-        +setreglement "Règles" @Membre "Accepter" ✅ "Le texte complet des règles ici"
-        """
-        self.bot.db.set_rule(ctx.guild.id, title, text, role.id, button_text, emoji or "✅")
-        await ctx.send(f"✅ Règlement configuré avec succès pour le rôle {role.mention}.")
+    async def reglement(self, ctx):
+        """Assistant pour configurer le règlement étape par étape."""
+        def check(m):
+            return m.author == ctx.author and m.channel == ctx.channel
+
+        await ctx.send("📄 **Entrez le titre du règlement :**")
+        try:
+            msg = await self.bot.wait_for("message", check=check, timeout=120)
+            title = msg.content
+        except:
+            return await ctx.send("⏱️ Temps écoulé.")
+
+        await ctx.send("✏️ **Entrez le texte complet du règlement :**")
+        try:
+            msg = await self.bot.wait_for("message", check=check, timeout=300)
+            text = msg.content
+        except:
+            return await ctx.send("⏱️ Temps écoulé.")
+
+        await ctx.send("👤 **Quel rôle donner après acceptation ?** (ou tapez `n` pour ne pas donner de rôle)")
+        try:
+            msg = await self.bot.wait_for("message", check=check, timeout=120)
+            if msg.content.lower() == "n":
+                role_id = None
+            else:
+                role = discord.utils.get(ctx.guild.roles, name=msg.content) or discord.utils.get(ctx.guild.roles, id=int(msg.content))
+                if not role:
+                    return await ctx.send("❌ Rôle non trouvé.")
+                role_id = role.id
+        except:
+            return await ctx.send("⏱️ Temps écoulé.")
+
+        await ctx.send("✅ **Texte du bouton pour accepter le règlement :**")
+        try:
+            msg = await self.bot.wait_for("message", check=check, timeout=60)
+            button_text = msg.content
+        except:
+            return await ctx.send("⏱️ Temps écoulé.")
+
+        await ctx.send("🔢 **Emoji pour le bouton :** (ou `n` pour aucun)")
+        try:
+            msg = await self.bot.wait_for("message", check=check, timeout=60)
+            emoji = None if msg.content.lower() == "n" else msg.content
+        except:
+            return await ctx.send("⏱️ Temps écoulé.")
+
+        await ctx.send("🖼️ **Image à mettre dans l'embed ?** (ou `n` pour aucune)")
+        try:
+            msg = await self.bot.wait_for("message", check=check, timeout=120)
+            if msg.content.lower() == "n":
+                image = None
+            else:
+                image = msg.content  # on prend le lien
+        except:
+            return await ctx.send("⏱️ Temps écoulé.")
+
+        # Sauvegarde dans la base
+        self.bot.db.set_rule(ctx.guild.id, title, text, role_id, button_text, emoji, image)
+
+        await ctx.send("✅ **Règlement configuré avec succès !**")
 
     @commands.command()
-    @commands.has_permissions(administrator=True)
-    async def reglement(self, ctx):
-        """
-        Envoie le règlement avec le bouton pour accepter.
-        """
+    async def showreglement(self, ctx):
+        """Affiche le règlement avec le bouton d'acceptation."""
         data = self.bot.db.get_rule(ctx.guild.id)
         if not data:
             return await ctx.send("❌ Aucun règlement configuré pour ce serveur.")
@@ -34,27 +83,30 @@ class Policy(commands.Cog):
             description=data["text"],
             color=COLOR
         )
+        if data.get("image"):
+            embed.set_image(url=data["image"])
 
-        # Création du bouton
         class AcceptButton(discord.ui.View):
-            def __init__(self, role_id, emoji):
+            def __init__(self, role_id, button_text, emoji):
                 super().__init__(timeout=None)
                 self.role_id = role_id
+                self.button_text = button_text
                 self.emoji = emoji
 
-            @discord.ui.button(label=data["button"], style=discord.ButtonStyle.green, emoji=data["emoji"])
+            @discord.ui.button(label="Accepter", style=discord.ButtonStyle.green)
             async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
-                role = interaction.guild.get_role(self.role_id)
-                if not role:
-                    return await interaction.response.send_message("❌ Rôle non trouvé.", ephemeral=True)
-                if role in interaction.user.roles:
+                role = interaction.guild.get_role(self.role_id) if self.role_id else None
+                if role and role in interaction.user.roles:
                     return await interaction.response.send_message("✅ Vous avez déjà accepté le règlement.", ephemeral=True)
-                await interaction.user.add_roles(role)
-                await interaction.response.send_message(f"✅ Vous avez accepté le règlement et reçu le rôle {role.name}.", ephemeral=True)
+                if role:
+                    await interaction.user.add_roles(role)
+                    await interaction.response.send_message(f"✅ Vous avez accepté le règlement et reçu le rôle {role.name}.", ephemeral=True)
+                else:
+                    await interaction.response.send_message("✅ Vous avez accepté le règlement.", ephemeral=True)
 
-        view = AcceptButton(data["role"], data["emoji"])
+        view = AcceptButton(data.get("role"), data.get("button"), data.get("emoji"))
         await ctx.send(embed=embed, view=view)
 
-# ✅ Correct pour Discord.py 2.x
+
 async def setup(bot):
     await bot.add_cog(Policy(bot))
