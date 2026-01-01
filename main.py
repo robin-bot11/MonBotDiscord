@@ -39,13 +39,15 @@ cogs = [
     "bienvenue"
 ]
 
-# --- Chargement des cogs ---
-for cog in cogs:
-    try:
-        bot.load_extension(cog)
-        logging.info(f"{cog} chargé ✅")
-    except Exception as e:
-        logging.error(f"Erreur en chargeant {cog} : {e}")
+# --- Chargement des cogs (discord.py 2.x) ---
+@bot.event
+async def setup_hook():
+    for cog in cogs:
+        try:
+            await bot.load_extension(cog)
+            logging.info(f"{cog} chargé ✅")
+        except Exception as e:
+            logging.error(f"Erreur en chargeant {cog} : {e}")
 
 # --- Event on_ready ---
 @bot.event
