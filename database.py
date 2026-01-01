@@ -1,75 +1,105 @@
-# database.py
-import sqlite3
-from datetime import datetime
+from import json
+import os
 
-conn = sqlite3.connect("botdata.db")
-cursor = conn.cursor()
+DB_FILE = "database.json"
 
-# --- Bienvenue ---
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS welcome_config (
-    guild_id INTEGER PRIMARY KEY,
-    channel_id INTEGER,
-    message TEXT
-)
-""")
+class Database:
+    def __init__(self):
+        if not os.path.exists(DB_FILE):
+            with open(DB_FILE, "w", encoding="utf-8") as f:
+                json.dump({
+                    "warns": {},
+                    "welcome": {},
+                    "gyroles": [],
+                    "lock_roles": {},
+                    "rules": {},
+                    "snipes": {}
+                }, f, indent=4)
+        self.load()
 
-# --- Warns ---
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS warns (
-    guild_id INTEGER,
-    user_id INTEGER,
-    reason TEXT,
-    author_id INTEGER,
-    date TEXT
-)
-""")
+    def load(self):
+        with open(DB_FILE, "r", encoding="utf-8") as f:
+            self.data = json.load(f)
 
-# --- Lock roles ---
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS locked_roles (
-    guild_id INTEGER,
-    role_id INTEGER
-)
-""")
+    def save(self):
+        with open(DB_FILE, "w", encoding="utf-8") as f:
+            json.dump(self.data, f, indent=4, ensure_ascii=False)
 
-# --- Giveaways ---
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS giveaways (
-    guild_id INTEGER,
-    message_id INTEGER,
-    reward TEXT,
-    end_time TEXT,
-    author_id INTEGER
-)
-""")
+    # --- Warns ---
+    def add_warn(self, member_id, reason, staff, date):
+        self.data["warns"].setdefault(str(member_id), [])
+        self.data["warns"][str(member_id)].append({
+            "reason": reason,
+            "staff": staff,
+            "date": date
+        })
+        self.save()
 
-# --- Règles ---
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS rules (
-    guild_id INTEGER PRIMARY KEY,
-    title TEXT,
-    text TEXT,
-    role_id INTEGER,
-    button_text TEXT,
-    button_emoji TEXT
-)
-""")
+    def get_warns(self, member_id):
+        return self.data["warns"].get(str(member_id), [])
 
-conn.commit()
+    def del_warn(self, member_id, index):
+        if str(member_id) in self.data["warns"]:
+            if 0 <= index < len(self.data["warns"][str(member_id)]):
+                del self.data["warns"][str(member_id)][index]
+                self.save()
+                return True
+        return False
 
-def add_warn(guild_id, user_id, reason, author_id):
-    date = datetime.utcnow().strftime("%Y-%m-%d")
-    cursor.execute("INSERT INTO warns VALUES (?, ?, ?, ?, ?)",
-                   (guild_id, user_id, reason, author_id, date))
-    conn.commit()
+    # --- Welcome ---
+    def set_welcome_message(self, guild_id, message):
+        self.data["welcome"].setdefault(str(guild_id), {})
+        self.data["welcome"][str(guild_id)]["message"] = message
+        self.save()
 
-def get_warns(guild_id, user_id):
-    cursor.execute("SELECT rowid, reason, author_id, date FROM warns WHERE guild_id=? AND user_id=?",
-                   (guild_id, user_id))
-    return cursor.fetchall()
+    def set_welcome_channel(self, guild_id, channel_id):
+        self.data["welcome"].setdefault(str(guild_id), {})
+        self.data["welcome"][str(guild_id)]["channel"] = channel_id
+        self.save()
 
-def remove_warn(guild_id, rowid):
-    cursor.execute("DELETE FROM warns WHERE rowid=? AND guild_id=?",
-                   (rowid, guild_id))
-    conn.commit()
+    def get_welcome(self, guild_id):
+        return self.data["welcome"].get(str(guild_id), {})
+
+    # --- Giveaway roles ---
+    def add_gyrole(self, role_id):
+        if role_id not in self.data["gyroles"]:
+            self.data["gyroles"].append(role_id)
+            self.save()
+
+    def remove_gyrole(self, role_id):
+        if role_id in self.data["gyroles"]:
+            self.data["gyroles"].remove(role_id)
+            self.save()
+
+    def get_gyroles(self):
+        return self.data["gyroles"]
+
+    # --- Lock roles ---
+    def set_lock_roles(self, guild_id, roles):
+        self.data["lock_roles"][str(guild_id)] = roles
+        self.save()
+
+    def get_lock_roles(self, guild_id):
+        return self.data["lock_roles"].get(str(guild_id), [])
+
+    # --- Règlement ---
+    def set_rule(self, guild_id, title, text, role_id, button_text, emoji):
+        self.data["rules"][str(guild_id)] = {
+            "title": title,
+            "text": text,
+            "role": role_id,
+            "button": button_text,
+            "emoji": emoji
+        }
+        self.save()
+
+    def get_rule(self, guild_id):
+        return self.data["rules"].get(str(guild_id), {})
+
+    # --- Snipes ---
+    def set_snipe(self, channel_id, message):
+        self.data["snipes"][str(channel_id)] = message
+        self.save()
+
+    def get_snipe(self, channel_id):
+        return self.data["snipes"].get(str(channel_id))
