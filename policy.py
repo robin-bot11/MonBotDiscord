@@ -1,12 +1,11 @@
-# règles.py
 from discord.ext import commands
 import discord
 
 COLOR = 0x6b00cb
 
-class Rules(commands.Cog):
+class Policy(commands.Cog):
     def __init__(self, bot):
-        self.bot = bot  # permet d'accéder à self.bot.db
+        self.bot = bot
 
     @commands.command()
     @commands.has_permissions(administrator=True)
@@ -14,11 +13,11 @@ class Rules(commands.Cog):
         guild_id = ctx.guild.id
         role_id = role.id if role else None
 
-        # Enregistrer le règlement dans la DB
+        # Sauvegarde dans la DB
         self.bot.db.set_rule(guild_id, titre, texte, role_id, texte_bouton, emoji)
-        
-        # Créer le message de confirmation
-        msg = f"Règlement configuré : **{titre}**\n{texte}\n"
+
+        # Message de confirmation
+        msg = f"📜 Règlement configuré : **{titre}**\n{texte}\n"
         if role:
             msg += f"Rôle à attribuer : {role.mention}\n"
         if image != "aucun":
@@ -26,6 +25,5 @@ class Rules(commands.Cog):
         msg += f"Texte du bouton : {texte_bouton}\nEmoji : {emoji}"
         await ctx.send(msg)
 
-# ✅ Correct pour Discord.py 2.x
 async def setup(bot):
-    await bot.add_cog(Rules(bot))
+    await bot.add_cog(Policy(bot))
