@@ -1,8 +1,8 @@
 import json
 import os
+import shutil
 
 DB_FILE = "database.json"
-
 
 class Database:
     def __init__(self):
@@ -25,6 +25,15 @@ class Database:
     def save(self):
         with open(DB_FILE, "w", encoding="utf-8") as f:
             json.dump(self.data, f, indent=4, ensure_ascii=False)
+
+    # --- Backup / Restore ---
+    def backup(self):
+        shutil.copy(DB_FILE, "backup.json")
+
+    def restore(self):
+        if os.path.exists("backup.json"):
+            shutil.copy("backup.json", DB_FILE)
+            self.load()
 
     # --- Warns ---
     def add_warn(self, member_id, reason, staff, date):
