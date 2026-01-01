@@ -4,7 +4,6 @@ import discord
 COLOR = 0x6b00cb
 OWNER_ID = 1383790178522370058
 
-
 class HelpSelect(discord.ui.Select):
     def __init__(self, is_owner: bool):
         options = [
@@ -13,10 +12,8 @@ class HelpSelect(discord.ui.Select):
             discord.SelectOption(label="Fun", emoji="😂"),
             discord.SelectOption(label="Bienvenue", emoji="👋"),
             discord.SelectOption(label="Partenariat", emoji="🤝"),
-            discord.SelectOption(label="Logs", emoji="📜"),
-            discord.SelectOption(label="Règlement", emoji="📌"),
+            discord.SelectOption(label="Règlement", emoji="📜"),
         ]
-
         if is_owner:
             options.append(discord.SelectOption(label="Owner", emoji="👑"))
 
@@ -60,9 +57,7 @@ class HelpSelect(discord.ui.Select):
         # ---------------- Fun ----------------
         elif category == "Fun":
             embed.title = "😂 Fun"
-            embed.description = (
-                "**+papa**\n↳ Permission : Aucune"
-            )
+            embed.description = "**+papa**\n↳ Permission : Aucune"
 
         # ---------------- Bienvenue ----------------
         elif category == "Bienvenue":
@@ -76,24 +71,16 @@ class HelpSelect(discord.ui.Select):
         elif category == "Partenariat":
             embed.title = "🤝 Partenariat"
             embed.description = (
-                "**+setpartnerrole `<@role>`**\n↳ Permission : Owner\n\n"
+                "**+setpartnerrole `<@rôle>`**\n↳ Permission : Owner\n\n"
                 "**+setpartnersalon `<#channel>`**\n↳ Permission : Owner"
-            )
-
-        # ---------------- Logs ----------------
-        elif category == "Logs":
-            embed.title = "📜 Journaux / Logs"
-            embed.description = (
-                "**+setlog `<type> <#channel>`**\n"
-                "↳ Configure les logs pour un type spécifique (role, mod, voice, channel, message, member). Permission : Administrateur"
             )
 
         # ---------------- Règlement ----------------
         elif category == "Règlement":
-            embed.title = "📌 Règlement"
+            embed.title = "📜 Règlement"
             embed.description = (
-                "**+reglement**\n"
-                "↳ Configure le règlement du serveur. Permission : Administrateur"
+                "**+reglement `<titre> <texte> [role] [image] [emoji] [texte_bouton]`**\n"
+                "↳ Permission : Administrateur"
             )
 
         # ---------------- Owner ----------------
@@ -129,7 +116,7 @@ class Aide(commands.Cog):
         is_owner = ctx.author.id == OWNER_ID
         embed = discord.Embed(
             title="📖 Aide du bot",
-            description="Utilise le menu déroulant pour afficher les commandes.",
+            description="Utilise le menu déroulant pour afficher les commandes par catégorie.",
             color=COLOR
         )
         try:
