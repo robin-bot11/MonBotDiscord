@@ -1,60 +1,75 @@
+# database.py
 import sqlite3
+from datetime import datetime
 
-class Database:
-    def __init__(self):
-        self.conn = sqlite3.connect("bot.db")
-        self.cursor = self.conn.cursor()
-        self.setup()
+conn = sqlite3.connect("botdata.db")
+cursor = conn.cursor()
 
-    def setup(self):
-        # Bienvenue
-        self.cursor.execute("""
-        CREATE TABLE IF NOT EXISTS welcome (
-            guild_id INTEGER PRIMARY KEY,
-            channel_id INTEGER,
-            message TEXT
-        )
-        """)
+# --- Bienvenue ---
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS welcome_config (
+    guild_id INTEGER PRIMARY KEY,
+    channel_id INTEGER,
+    message TEXT
+)
+""")
 
-        # Snipe
-        self.cursor.execute("""
-        CREATE TABLE IF NOT EXISTS snipe (
-            channel_id INTEGER PRIMARY KEY,
-            author TEXT,
-            content TEXT
-        )
-        """)
+# --- Warns ---
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS warns (
+    guild_id INTEGER,
+    user_id INTEGER,
+    reason TEXT,
+    author_id INTEGER,
+    date TEXT
+)
+""")
 
-        self.conn.commit()
+# --- Lock roles ---
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS locked_roles (
+    guild_id INTEGER,
+    role_id INTEGER
+)
+""")
 
-    # ---------- BIENVENUE ----------
-    def set_welcome(self, guild_id, channel_id, message):
-        self.cursor.execute(
-            "INSERT OR REPLACE INTO welcome VALUES (?, ?, ?)",
-            (guild_id, channel_id, message)
-        )
-        self.conn.commit()
+# --- Giveaways ---
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS giveaways (
+    guild_id INTEGER,
+    message_id INTEGER,
+    reward TEXT,
+    end_time TEXT,
+    author_id INTEGER
+)
+""")
 
-    def get_welcome(self, guild_id):
-        self.cursor.execute(
-            "SELECT channel_id, message FROM welcome WHERE guild_id = ?",
-            (guild_id,)
-        )
-        return self.cursor.fetchone()
+# --- Règles ---
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS rules (
+    guild_id INTEGER PRIMARY KEY,
+    title TEXT,
+    text TEXT,
+    role_id INTEGER,
+    button_text TEXT,
+    button_emoji TEXT
+)
+""")
 
-    # ---------- SNIPE ----------
-    def set_snipe(self, channel_id, author, content):
-        self.cursor.execute(
-            "INSERT OR REPLACE INTO snipe VALUES (?, ?, ?)",
-            (channel_id, author, content)
-        )
-        self.conn.commit()
+conn.commit()
 
-    def get_snipe(self, channel_id):
-        self.cursor.execute(
-            "SELECT author, content FROM snipe WHERE channel_id = ?",
-            (channel_id,)
-        )
-        return self.cursor.fetchone()
+def add_warn(guild_id, user_id, reason, author_id):
+    date = datetime.utcnow().strftime("%Y-%m-%d")
+    cursor.execute("INSERT INTO warns VALUES (?, ?, ?, ?, ?)",
+                   (guild_id, user_id, reason, author_id, date))
+    conn.commit()
 
-db = Database()
+def get_warns(guild_id, user_id):
+    cursor.execute("SELECT rowid, reason, author_id, date FROM warns WHERE guild_id=? AND user_id=?",
+                   (guild_id, user_id))
+    return cursor.fetchall()
+
+def remove_warn(guild_id, rowid):
+    cursor.execute("DELETE FROM warns WHERE rowid=? AND guild_id=?",
+                   (rowid, guild_id))
+    conn.commit()
