@@ -1,79 +1,142 @@
-# aide.py
 from discord.ext import commands
 import discord
 
 COLOR = 0x6b00cb
 OWNER_ID = 1383790178522370058
 
+
+class HelpSelect(discord.ui.Select):
+    def __init__(self, is_owner: bool):
+        options = [
+            discord.SelectOption(label="Modération", emoji="🛡️"),
+            discord.SelectOption(label="Giveaway", emoji="🎉"),
+            discord.SelectOption(label="Fun", emoji="😂"),
+            discord.SelectOption(label="Bienvenue", emoji="👋"),
+            discord.SelectOption(label="Partenariat", emoji="🤝"),
+        ]
+
+        if is_owner:
+            options.append(discord.SelectOption(label="Owner", emoji="👑"))
+
+        super().__init__(
+            placeholder="📖 Choisis une catégorie",
+            min_values=1,
+            max_values=1,
+            options=options
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        category = self.values[0]
+        embed = discord.Embed(color=COLOR)
+
+        if category == "Modération":
+            embed.title = "🛡️ Modération"
+            embed.description = (
+                "**+kick `<ID> <raison>`**\n"
+                "↳ Permission : Kick Members\n\n"
+                "**+ban `<ID> <raison>`**\n"
+                "↳ Permission : Ban Members\n\n"
+                "**+uban `<ID>`**\n"
+                "↳ Permission : Ban Members\n\n"
+                "**+mute `<ID> <raison>`**\n"
+                "↳ Permission : Manage Roles\n\n"
+                "**+unmute `<ID>`**\n"
+                "↳ Permission : Manage Roles\n\n"
+                "**+warn `<ID> <raison>`**\n"
+                "↳ Permission : Manage Messages\n\n"
+                "**+unwarn `<ID> <num>`**\n"
+                "↳ Permission : Manage Messages\n\n"
+                "**+warns `<ID>`**\n"
+                "↳ Permission : Manage Messages\n\n"
+                "**+purge `<nombre>`**\n"
+                "↳ Permission : Manage Messages\n\n"
+                "**+purgeall**\n"
+                "↳ Permission : Administrateur"
+            )
+
+        elif category == "Giveaway":
+            embed.title = "🎉 Giveaway"
+            embed.description = (
+                "**+gyveaway `<durée> <récompense>`**\n"
+                "↳ Permission : Rôle autorisé\n\n"
+                "**+gyrole `<@rôle>`**\n"
+                "↳ Permission : Administrateur\n\n"
+                "**+gyend `<ID>`**\n"
+                "↳ Permission : Rôle autorisé\n\n"
+                "**+gyrestart `<ID>`**\n"
+                "↳ Permission : Rôle autorisé"
+            )
+
+        elif category == "Fun":
+            embed.title = "😂 Fun"
+            embed.description = (
+                "**+papa**\n"
+                "↳ Permission : Aucune"
+            )
+
+        elif category == "Bienvenue":
+            embed.title = "👋 Bienvenue"
+            embed.description = (
+                "**+setwelcome `<message>`**\n"
+                "↳ Permission : Administrateur\n\n"
+                "**+setwelcomechannel `<#salon>`**\n"
+                "↳ Permission : Administrateur"
+            )
+
+        elif category == "Partenariat":
+            embed.title = "🤝 Partenariat"
+            embed.description = (
+                "**+setpartnerrole `<@rôle>`**\n"
+                "↳ Permission : Owner"
+            )
+
+        elif category == "Owner":
+            if interaction.user.id != OWNER_ID:
+                return await interaction.response.send_message(
+                    "⛔ Accès refusé.",
+                    ephemeral=True
+                )
+
+            embed.title = "👑 Owner"
+            embed.description = (
+                "**+ping**\n"
+                "↳ Permission : Owner\n\n"
+                "**+dm `<ID> <message>`**\n"
+                "↳ Permission : Owner\n\n"
+                "**+backupconfig**\n"
+                "↳ Permission : Owner\n\n"
+                "**+restoreconfig**\n"
+                "↳ Permission : Owner"
+            )
+
+        await interaction.response.edit_message(embed=embed, view=self.view)
+
+
+class HelpView(discord.ui.View):
+    def __init__(self, is_owner: bool):
+        super().__init__(timeout=180)
+        self.add_item(HelpSelect(is_owner))
+
+
 class Aide(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name="help")
-    async def help_command(self, ctx, page: str = None):
-        pages = {
-            "modération": {
-                "+kick <ID> <raison>": "Expulse un membre. Permission : Kick Members",
-                "+ban <ID> <raison>": "Bannit un membre. Permission : Ban Members",
-                "+uban <ID>": "Débannit un membre. Permission : Ban Members",
-                "+mute <ID> <raison>": "Mute un membre. Permission : Manage Roles",
-                "+unmute <ID>": "Démute un membre. Permission : Manage Roles",
-                "+warn <ID> <raison>": "Ajoute un avertissement. Permission : Manage Messages",
-                "+unwarn <ID> <num_warn>": "Supprime un avertissement. Permission : Manage Messages",
-                "+warns <ID>": "Liste les warns d’un membre. Permission : Manage Messages",
-                "+purge <nombre>": "Supprime un nombre de messages. Permission : Manage Messages",
-                "+purgeall": "Supprime tous les messages du salon. Permission : Administrateur"
-            },
-            "giveaway": {
-                "+gyveaway <durée> <récompense>": "Lance un giveaway. Permission : Rôle défini par +gyrole",
-                "+gyrole <ID rôle>": "Définit les rôles autorisés à lancer des giveaways. Permission : Administrateur",
-                "+gyend <ID>": "Termine un giveaway. Permission : Rôle défini",
-                "+gyrestart <ID>": "Relance un giveaway. Permission : Rôle défini"
-            },
-            "fun": {
-                "+papa": "Commande fun. Permission : Aucune"
-            },
-            "owner": {  # anciennement créateur
-                "+ping": "Vérifie si le bot répond. Permission : Owner",
-                "+dm <ID> <message>": "Envoie un DM à un utilisateur via le bot. Permission : Owner",
-                "+backupconfig": "Sauvegarde la configuration de la DB. Permission : Owner",
-                "+restoreconfig": "Restaure la configuration de la DB. Permission : Owner"
-            },
-            "policy": {  # anciennement règles
-                "+reglement <titre> <texte> <role> <image> <emoji> <texte_bouton>": "Configure le règlement du serveur. Permission : Administrateur"
-            },
-            "snipe": {
-                "+snipe": "Affiche le dernier message supprimé dans le salon. Permission : Aucune"
-            },
-            "bienvenue": {
-                "+setwelcome <message>": "Configure le message de bienvenue. Permission : Administrateur",
-                "+setwelcomechannel <#salon>": "Définit le salon où le message de bienvenue sera envoyé. Permission : Administrateur"
-            },
-            "partenariat": {
-                "+setpartnerrole <@rôle>": "Configure le rôle à ping automatiquement lorsqu’un lien d’invitation est posté dans le salon partenariat. Permission : Owner"
-            }
-        }
+    async def help_command(self, ctx):
+        is_owner = ctx.author.id == OWNER_ID
 
-        embed = discord.Embed(title="Commandes disponibles", color=COLOR)
-
-        if page:
-            page_name = page.lower()
-            if page_name in pages:
-                cmds = pages[page_name]
-                value = "\n".join([f"{cmd} : {desc}" for cmd, desc in cmds.items()])
-                embed.add_field(name=page_name.capitalize(), value=value, inline=False)
-            else:
-                embed.description = "Cette catégorie n'existe pas."
-        else:
-            for category, cmds in pages.items():
-                value = "\n".join([f"{cmd} : {desc}" for cmd, desc in cmds.items()])
-                embed.add_field(name=category.capitalize(), value=value, inline=False)
+        embed = discord.Embed(
+            title="📖 Aide du bot",
+            description="Utilise le menu déroulant pour afficher les commandes.",
+            color=COLOR
+        )
 
         try:
-            await ctx.author.send(embed=embed)
-            await ctx.send("Je t'ai envoyé la liste de commandes en MP !")
+            await ctx.author.send(embed=embed, view=HelpView(is_owner))
+            await ctx.reply("📬 **Help envoyé en message privé.**", mention_author=False)
         except discord.Forbidden:
-            await ctx.send(f"{ctx.author.mention}, je n'ai pas pu t'envoyer les commandes en MP.")
+            await ctx.reply("❌ Impossible de t’envoyer un MP.")
 
 async def setup(bot):
     await bot.add_cog(Aide(bot))
