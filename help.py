@@ -78,5 +78,6 @@ class Aide(commands.Cog):
         except discord.Forbidden:
             await ctx.send(f"{ctx.author.mention}, je n'ai pas pu t'envoyer les commandes en MP. Vérifie que tes DM sont ouverts.")
 
-def setup(bot):
-    bot.add_cog(Aide(bot))
+# --- Setup compatible discord.py 2.x ---
+async def setup(bot):
+    await bot.add_cog(Aide(bot))
