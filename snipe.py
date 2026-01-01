@@ -14,7 +14,7 @@ class Snipe(commands.Cog):
     @commands.has_permissions(manage_messages=True)
     async def snipe(self, ctx):
         if self.last_deleted:
-            await ctx.send(f"Dernier message supprimé : {self.last_deleted.content}")
+            await ctx.send(f"Dernier message supprimé de {self.last_deleted.author} : {self.last_deleted.content}")
         else:
             await ctx.send("Rien à snipe pour le moment !")
 
