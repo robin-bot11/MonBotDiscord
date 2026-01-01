@@ -32,62 +32,45 @@ class HelpSelect(discord.ui.Select):
         if category == "Modération":
             embed.title = "🛡️ Modération"
             embed.description = (
-                "**+kick `<ID> <raison>`**\n"
-                "↳ Permission : Kick Members\n\n"
-                "**+ban `<ID> <raison>`**\n"
-                "↳ Permission : Ban Members\n\n"
-                "**+uban `<ID>`**\n"
-                "↳ Permission : Ban Members\n\n"
-                "**+mute `<ID> <raison>`**\n"
-                "↳ Permission : Manage Roles\n\n"
-                "**+unmute `<ID>`**\n"
-                "↳ Permission : Manage Roles\n\n"
-                "**+warn `<ID> <raison>`**\n"
-                "↳ Permission : Manage Messages\n\n"
-                "**+unwarn `<ID> <num>`**\n"
-                "↳ Permission : Manage Messages\n\n"
-                "**+warns `<ID>`**\n"
-                "↳ Permission : Manage Messages\n\n"
-                "**+purge `<nombre>`**\n"
-                "↳ Permission : Manage Messages\n\n"
-                "**+purgeall**\n"
-                "↳ Permission : Administrateur"
+                "**+kick `<ID> <raison>`**\n↳ Permission : Kick Members\n\n"
+                "**+ban `<ID> <raison>`**\n↳ Permission : Ban Members\n\n"
+                "**+uban `<ID>`**\n↳ Permission : Ban Members\n\n"
+                "**+mute `<ID> <raison>`**\n↳ Permission : Manage Roles\n\n"
+                "**+unmute `<ID>`**\n↳ Permission : Manage Roles\n\n"
+                "**+warn `<ID> <raison>`**\n↳ Permission : Manage Messages\n\n"
+                "**+unwarn `<ID> <num>`**\n↳ Permission : Manage Messages\n\n"
+                "**+warns `<ID>`**\n↳ Permission : Manage Messages\n\n"
+                "**+purge `<nombre>`**\n↳ Permission : Manage Messages\n\n"
+                "**+purgeall**\n↳ Permission : Administrateur"
             )
 
         elif category == "Giveaway":
             embed.title = "🎉 Giveaway"
             embed.description = (
-                "**+gyveaway `<durée> <récompense>`**\n"
-                "↳ Permission : Rôle autorisé\n\n"
-                "**+gyrole `<@rôle>`**\n"
-                "↳ Permission : Administrateur\n\n"
-                "**+gyend `<ID>`**\n"
-                "↳ Permission : Rôle autorisé\n\n"
-                "**+gyrestart `<ID>`**\n"
-                "↳ Permission : Rôle autorisé"
+                "**+gyveaway `<durée> <récompense>`**\n↳ Permission : Rôle autorisé\n\n"
+                "**+gyrole `<@rôle>`**\n↳ Permission : Administrateur\n\n"
+                "**+gyend `<ID>`**\n↳ Permission : Rôle autorisé\n\n"
+                "**+gyrestart `<ID>`**\n↳ Permission : Rôle autorisé"
             )
 
         elif category == "Fun":
             embed.title = "😂 Fun"
             embed.description = (
-                "**+papa**\n"
-                "↳ Permission : Aucune"
+                "**+papa**\n↳ Permission : Aucune"
             )
 
         elif category == "Bienvenue":
             embed.title = "👋 Bienvenue"
             embed.description = (
-                "**+setwelcome `<message>`**\n"
-                "↳ Permission : Administrateur\n\n"
-                "**+setwelcomechannel `<#salon>`**\n"
-                "↳ Permission : Administrateur"
+                "**+setwelcome `<message>`**\n↳ Permission : Administrateur\n\n"
+                "**+setwelcomechannel `<#channel>`**\n↳ Permission : Administrateur"
             )
 
         elif category == "Partenariat":
             embed.title = "🤝 Partenariat"
             embed.description = (
-                "**+setpartnerrole `<@rôle>`**\n"
-                "↳ Permission : Owner"
+                "**+setpartnerrole `<@rôle>`**\n↳ Permission : Owner\n\n"
+                "**+setpartnerchannel `<#channel>`**\n↳ Permission : Owner"
             )
 
         elif category == "Owner":
@@ -99,14 +82,10 @@ class HelpSelect(discord.ui.Select):
 
             embed.title = "👑 Owner"
             embed.description = (
-                "**+ping**\n"
-                "↳ Permission : Owner\n\n"
-                "**+dm `<ID> <message>`**\n"
-                "↳ Permission : Owner\n\n"
-                "**+backupconfig**\n"
-                "↳ Permission : Owner\n\n"
-                "**+restoreconfig**\n"
-                "↳ Permission : Owner"
+                "**+ping**\n↳ Permission : Owner\n\n"
+                "**+dm `<ID> <message>`**\n↳ Permission : Owner\n\n"
+                "**+backupconfig**\n↳ Permission : Owner\n\n"
+                "**+restoreconfig**\n↳ Permission : Owner"
             )
 
         await interaction.response.edit_message(embed=embed, view=self.view)
@@ -137,6 +116,7 @@ class Aide(commands.Cog):
             await ctx.reply("📬 **Help envoyé en message privé.**", mention_author=False)
         except discord.Forbidden:
             await ctx.reply("❌ Impossible de t’envoyer un MP.")
+
 
 async def setup(bot):
     await bot.add_cog(Aide(bot))
