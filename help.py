@@ -13,6 +13,8 @@ class HelpSelect(discord.ui.Select):
             discord.SelectOption(label="Fun", emoji="😂"),
             discord.SelectOption(label="Bienvenue", emoji="👋"),
             discord.SelectOption(label="Partenariat", emoji="🤝"),
+            discord.SelectOption(label="Logs", emoji="📜"),
+            discord.SelectOption(label="Règlement", emoji="📌"),
         ]
 
         if is_owner:
@@ -29,6 +31,7 @@ class HelpSelect(discord.ui.Select):
         category = self.values[0]
         embed = discord.Embed(color=COLOR)
 
+        # ---------------- Modération ----------------
         if category == "Modération":
             embed.title = "🛡️ Modération"
             embed.description = (
@@ -44,6 +47,7 @@ class HelpSelect(discord.ui.Select):
                 "**+purgeall**\n↳ Permission : Administrateur"
             )
 
+        # ---------------- Giveaway ----------------
         elif category == "Giveaway":
             embed.title = "🎉 Giveaway"
             embed.description = (
@@ -53,12 +57,14 @@ class HelpSelect(discord.ui.Select):
                 "**+gyrestart `<ID>`**\n↳ Permission : Rôle autorisé"
             )
 
+        # ---------------- Fun ----------------
         elif category == "Fun":
             embed.title = "😂 Fun"
             embed.description = (
                 "**+papa**\n↳ Permission : Aucune"
             )
 
+        # ---------------- Bienvenue ----------------
         elif category == "Bienvenue":
             embed.title = "👋 Bienvenue"
             embed.description = (
@@ -66,20 +72,37 @@ class HelpSelect(discord.ui.Select):
                 "**+setwelcomechannel `<#channel>`**\n↳ Permission : Administrateur"
             )
 
+        # ---------------- Partenariat ----------------
         elif category == "Partenariat":
             embed.title = "🤝 Partenariat"
             embed.description = (
-                "**+setpartnerrole `<@rôle>`**\n↳ Permission : Owner\n\n"
-                "**+setpartnerchannel `<#channel>`**\n↳ Permission : Owner"
+                "**+setpartnerrole `<@role>`**\n↳ Permission : Owner\n\n"
+                "**+setpartnersalon `<#channel>`**\n↳ Permission : Owner"
             )
 
+        # ---------------- Logs ----------------
+        elif category == "Logs":
+            embed.title = "📜 Journaux / Logs"
+            embed.description = (
+                "**+setlog `<type> <#channel>`**\n"
+                "↳ Configure les logs pour un type spécifique (role, mod, voice, channel, message, member). Permission : Administrateur"
+            )
+
+        # ---------------- Règlement ----------------
+        elif category == "Règlement":
+            embed.title = "📌 Règlement"
+            embed.description = (
+                "**+reglement**\n"
+                "↳ Configure le règlement du serveur. Permission : Administrateur"
+            )
+
+        # ---------------- Owner ----------------
         elif category == "Owner":
             if interaction.user.id != OWNER_ID:
                 return await interaction.response.send_message(
                     "⛔ Accès refusé.",
                     ephemeral=True
                 )
-
             embed.title = "👑 Owner"
             embed.description = (
                 "**+ping**\n↳ Permission : Owner\n\n"
@@ -104,19 +127,16 @@ class Aide(commands.Cog):
     @commands.command(name="help")
     async def help_command(self, ctx):
         is_owner = ctx.author.id == OWNER_ID
-
         embed = discord.Embed(
             title="📖 Aide du bot",
             description="Utilise le menu déroulant pour afficher les commandes.",
             color=COLOR
         )
-
         try:
             await ctx.author.send(embed=embed, view=HelpView(is_owner))
             await ctx.reply("📬 **Help envoyé en message privé.**", mention_author=False)
         except discord.Forbidden:
             await ctx.reply("❌ Impossible de t’envoyer un MP.")
-
 
 async def setup(bot):
     await bot.add_cog(Aide(bot))
