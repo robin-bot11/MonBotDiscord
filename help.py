@@ -12,44 +12,45 @@ class Aide(commands.Cog):
     async def help(self, ctx, page: str = None):
         """Affiche la liste des commandes par catégorie ou une catégorie spécifique"""
 
-        # --- Définir les pages avec description ---
+        # --- Pages avec description + permissions ---
         pages = {
             "Modération": {
-                "+kick <ID> <raison>": "Expulse un membre du serveur.",
-                "+ban <ID> <raison>": "Bannit un membre du serveur.",
-                "+uban <ID>": "Débannit un membre.",
-                "+mute <ID> <raison>": "Mute un membre.",
-                "+unmute <ID>": "Démute un membre.",
-                "+warn <ID> <raison>": "Ajoute un avertissement à un membre.",
-                "+unwarn <ID> <num_warn>": "Supprime un avertissement spécifique.",
-                "+warns <ID>": "Liste les warns d’un membre.",
-                "+purge <nombre>": "Supprime un nombre de messages dans le salon.",
-                "+purgeall": "Supprime tous les messages du salon."
+                "+kick <ID> <raison>": "Expulse un membre. Permission : Kick Members",
+                "+ban <ID> <raison>": "Bannit un membre. Permission : Ban Members",
+                "+uban <ID>": "Débannit un membre. Permission : Ban Members",
+                "+mute <ID> <raison>": "Mute un membre. Permission : Manage Roles",
+                "+unmute <ID>": "Démute un membre. Permission : Manage Roles",
+                "+warn <ID> <raison>": "Ajoute un avertissement. Permission : Manage Messages",
+                "+unwarn <ID> <num_warn>": "Supprime un avertissement. Permission : Manage Messages",
+                "+warns <ID>": "Liste les warns d’un membre. Permission : Manage Messages",
+                "+purge <nombre>": "Supprime un nombre de messages. Permission : Manage Messages",
+                "+purgeall": "Supprime tous les messages du salon. Permission : Administrateur"
             },
             "Giveaway": {
-                "+gyveaway <durée> <récompense>": "Lance un giveaway.",
-                "+gyrole <ID rôle>": "Définit les rôles autorisés à lancer des giveaways.",
-                "+gyend <ID>": "Termine un giveaway manuellement.",
-                "+gyrestart <ID>": "Relance un giveaway actif."
+                "+gyveaway <durée> <récompense>": "Lance un giveaway. Permission : Rôle défini par +gyrole",
+                "+gyrole <ID rôle>": "Définit les rôles autorisés à lancer des giveaways. Permission : Administrateur",
+                "+gyend <ID>": "Termine un giveaway. Permission : Rôle défini",
+                "+gyrestart <ID>": "Relance un giveaway. Permission : Rôle défini"
             },
             "Messages / Salons": {
-                "+say <texte>": "Faire parler le bot dans le salon.",
-                "+sayembed <texte>": "Faire parler le bot avec un embed.",
-                "+createchannel <nom> <type>": "Créer un salon textuel ou vocal.",
-                "+deletechannel <#salon>": "Supprime un salon mentionné."
+                "+say <texte>": "Faire parler le bot. Permission : Administrateur",
+                "+sayembed <texte>": "Faire parler le bot avec embed. Permission : Administrateur",
+                "+createchannel <nom> <type>": "Créer un salon textuel ou vocal. Permission : Manage Channels",
+                "+deletechannel <#salon>": "Supprime un salon. Permission : Manage Channels"
             },
             "Bienvenue": {
-                "+setwelcome <message>": "Configure le message de bienvenue.",
-                "+setwelcomechannel <#salon>": "Configure le salon où envoyer le message de bienvenue."
+                "+setwelcome <message>": "Configurer le message de bienvenue. Permission : Administrateur",
+                "+setwelcomechannel <#salon>": "Configurer le salon de bienvenue. Permission : Administrateur"
             },
             "Règlement": {
-                "+reglement <titre> <texte> <role> <image ou 'aucun'> <emoji ou 'aucun'> <texte bouton>": "Configure le règlement du serveur."
+                "+reglement <titre> <texte> <role> <image ou 'aucun'> <emoji ou 'aucun'> <texte bouton>": 
+                "Configurer le règlement. Permission : Administrateur"
             },
             "Fun": {
-                "+papa": "Une commande fun pour célébrer le papa du serveur."
+                "+papa": "Commande fun. Permission : Aucune"
             },
             "Snipe": {
-                "+snipe": "Récupère le dernier message supprimé dans un salon."
+                "+snipe": "Récupère le dernier message supprimé. Permission : Aucune"
             }
         }
 
@@ -70,7 +71,7 @@ class Aide(commands.Cog):
                 value = "\n".join([f"{cmd} : {desc}" for cmd, desc in cmds.items()])
                 embed.add_field(name=category, value=value, inline=False)
 
-        # --- Essayer d'envoyer en DM ---
+        # --- Envoi en DM ---
         try:
             await ctx.author.send(embed=embed)
             await ctx.send("Je t'ai envoyé la liste de commandes en MP !")
