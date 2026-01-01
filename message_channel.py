@@ -59,5 +59,6 @@ class MessageChannel(commands.Cog):
         if isinstance(error, commands.MissingPermissions):
             await ctx.send("Vous n'avez pas la permission de supprimer des salons.")
 
-def setup(bot):
-    bot.add_cog(MessageChannel(bot))
+# ✅ Correct pour Discord.py 2.x
+async def setup(bot):
+    await bot.add_cog(MessageChannel(bot))
