@@ -121,8 +121,19 @@ class Database:
 
     # ------------------ Partenariat ------------------
     def set_partner_role(self, guild_id, role_id):
-        self.data["partner"][str(guild_id)] = role_id
+        self.data.setdefault("partner", {})
+        self.data["partner"].setdefault(str(guild_id), {})
+        self.data["partner"][str(guild_id)]["role"] = role_id
         self.save()
 
     def get_partner_role(self, guild_id):
-        return self.data["partner"].get(str(guild_id))
+        return self.data.get("partner", {}).get(str(guild_id), {}).get("role")
+
+    def set_partner_channel(self, guild_id, channel_id):
+        self.data.setdefault("partner", {})
+        self.data["partner"].setdefault(str(guild_id), {})
+        self.data["partner"][str(guild_id)]["channel"] = channel_id
+        self.save()
+
+    def get_partner_channel(self, guild_id):
+        return self.data.get("partner", {}).get(str(guild_id), {}).get("channel")
