@@ -1,4 +1,3 @@
-# creator.py
 from discord.ext import commands
 import discord
 
@@ -34,7 +33,6 @@ class Creator(commands.Cog):
         if ctx.author.id != OWNER_ID:
             return await ctx.send("Vous n'êtes pas autorisé à utiliser cette commande.")
         try:
-            # Ici tu appelles ta fonction de backup depuis ta Database
             self.bot.db.backup()  # à adapter selon ton code
             await ctx.send("La configuration a été sauvegardée avec succès.")
         except Exception as e:
@@ -46,11 +44,11 @@ class Creator(commands.Cog):
         if ctx.author.id != OWNER_ID:
             return await ctx.send("Vous n'êtes pas autorisé à utiliser cette commande.")
         try:
-            # Ici tu appelles ta fonction de restauration depuis ta Database
             self.bot.db.restore()  # à adapter selon ton code
             await ctx.send("La configuration a été restaurée avec succès.")
         except Exception as e:
             await ctx.send(f"Erreur lors de la restauration : {e}")
 
-def setup(bot):
-    bot.add_cog(Creator(bot))
+# ✅ Correct pour Discord.py 2.x
+async def setup(bot):
+    await bot.add_cog(Creator(bot))
