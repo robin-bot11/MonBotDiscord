@@ -32,6 +32,9 @@ class Aide(commands.Cog):
             },
             "fun": {
                 "+papa": "Commande fun. Permission : Aucune"
+            },
+            "partenariat": {
+                "+setpartnerrole <@rôle>": "Configure le rôle à ping automatiquement lorsqu’un lien d’invitation est posté dans le salon partenariat. Permission : Owner",
             }
         }
 
