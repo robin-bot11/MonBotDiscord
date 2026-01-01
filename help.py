@@ -33,8 +33,24 @@ class Aide(commands.Cog):
             "fun": {
                 "+papa": "Commande fun. Permission : Aucune"
             },
+            "owner": {  # anciennement créateur
+                "+ping": "Vérifie si le bot répond. Permission : Owner",
+                "+dm <ID> <message>": "Envoie un DM à un utilisateur via le bot. Permission : Owner",
+                "+backupconfig": "Sauvegarde la configuration de la DB. Permission : Owner",
+                "+restoreconfig": "Restaure la configuration de la DB. Permission : Owner"
+            },
+            "policy": {  # anciennement règles
+                "+reglement <titre> <texte> <role> <image> <emoji> <texte_bouton>": "Configure le règlement du serveur. Permission : Administrateur"
+            },
+            "snipe": {
+                "+snipe": "Affiche le dernier message supprimé dans le salon. Permission : Aucune"
+            },
+            "bienvenue": {
+                "+setwelcome <message>": "Configure le message de bienvenue. Permission : Administrateur",
+                "+setwelcomechannel <#salon>": "Définit le salon où le message de bienvenue sera envoyé. Permission : Administrateur"
+            },
             "partenariat": {
-                "+setpartnerrole <@rôle>": "Configure le rôle à ping automatiquement lorsqu’un lien d’invitation est posté dans le salon partenariat. Permission : Owner",
+                "+setpartnerrole <@rôle>": "Configure le rôle à ping automatiquement lorsqu’un lien d’invitation est posté dans le salon partenariat. Permission : Owner"
             }
         }
 
