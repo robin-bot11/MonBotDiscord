@@ -8,18 +8,16 @@ class Creator(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # ------------------ PING ------------------
     @commands.command()
     async def ping(self, ctx):
         if ctx.author.id != OWNER_ID:
-            return await ctx.send("Vous n'êtes pas autorisé à utiliser cette commande.")
+            return
         await ctx.send("Le bot est en ligne et répond correctement.")
 
-    # ------------------ DM ------------------
     @commands.command()
     async def dm(self, ctx, user_id: int, *, message):
         if ctx.author.id != OWNER_ID:
-            return await ctx.send("Vous n'êtes pas autorisé à utiliser cette commande.")
+            return
         user = await self.bot.fetch_user(user_id)
         try:
             await user.send(message)
@@ -27,28 +25,25 @@ class Creator(commands.Cog):
         except:
             await ctx.send("Impossible d'envoyer le message à cet utilisateur.")
 
-    # ------------------ BACKUP CONFIG ------------------
     @commands.command()
     async def backupconfig(self, ctx):
         if ctx.author.id != OWNER_ID:
-            return await ctx.send("Vous n'êtes pas autorisé à utiliser cette commande.")
+            return
         try:
-            self.bot.db.backup()  # à adapter selon ton code
+            self.bot.db.backup()
             await ctx.send("La configuration a été sauvegardée avec succès.")
         except Exception as e:
-            await ctx.send(f"Erreur lors de la sauvegarde : {e}")
+            await ctx.send(f"Erreur : {e}")
 
-    # ------------------ RESTORE CONFIG ------------------
     @commands.command()
     async def restoreconfig(self, ctx):
         if ctx.author.id != OWNER_ID:
-            return await ctx.send("Vous n'êtes pas autorisé à utiliser cette commande.")
+            return
         try:
-            self.bot.db.restore()  # à adapter selon ton code
+            self.bot.db.restore()
             await ctx.send("La configuration a été restaurée avec succès.")
         except Exception as e:
-            await ctx.send(f"Erreur lors de la restauration : {e}")
+            await ctx.send(f"Erreur : {e}")
 
-# ✅ Correct pour Discord.py 2.x
 async def setup(bot):
     await bot.add_cog(Creator(bot))
