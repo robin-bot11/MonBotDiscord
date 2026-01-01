@@ -30,9 +30,9 @@ cogs = [
     "verrouiller",
     "journaux",
     "moderation",
-    "creator",
+    "owner",        # anciennement créateur.py
     "message_channel",
-    "règles",
+    "policy",       # anciennement règles.py
     "snipe",
     "bienvenue"
 ]
