@@ -1,9 +1,11 @@
+# help_module.py
 from discord.ext import commands
 import discord
 
 COLOR = 0x6b00cb
 OWNER_ID = 1383790178522370058
 
+# ---------------- Menu déroulant ----------------
 class HelpSelect(discord.ui.Select):
     def __init__(self, is_owner: bool):
         options = [
@@ -79,8 +81,18 @@ class HelpSelect(discord.ui.Select):
         elif category == "Règlement":
             embed.title = "📜 Règlement"
             embed.description = (
-                "**+reglement `<titre> <texte> [role] [image] [emoji] [texte_bouton]`**\n"
-                "↳ Permission : Administrateur"
+                "**+reglement**\n"
+                "↳ Permission : Administrateur\n"
+                "↳ Lance un assistant interactif pour configurer le règlement étape par étape :\n"
+                "   • Titre\n"
+                "   • Texte complet\n"
+                "   • Rôle à donner après acceptation (ou `n` pour aucun)\n"
+                "   • Texte du bouton\n"
+                "   • Emoji (ou `n` pour aucun)\n"
+                "   • Image (ou `n` pour aucune)\n\n"
+                "**+showreglement**\n"
+                "↳ Permission : Tous\n"
+                "↳ Affiche le règlement avec le bouton d'acceptation"
             )
 
         # ---------------- Owner ----------------
@@ -101,12 +113,14 @@ class HelpSelect(discord.ui.Select):
         await interaction.response.edit_message(embed=embed, view=self.view)
 
 
+# ---------------- Vue pour le menu ----------------
 class HelpView(discord.ui.View):
     def __init__(self, is_owner: bool):
         super().__init__(timeout=180)
         self.add_item(HelpSelect(is_owner))
 
 
+# ---------------- Commande Help ----------------
 class Aide(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -125,5 +139,7 @@ class Aide(commands.Cog):
         except discord.Forbidden:
             await ctx.reply("❌ Impossible de t’envoyer un MP.")
 
+
+# ---------------- Setup ----------------
 async def setup(bot):
     await bot.add_cog(Aide(bot))
