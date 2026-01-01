@@ -26,15 +26,16 @@ bot.db = Database()  # Singleton pour gérer warns, configs, backup/restore
 cogs = [
     "fun",
     "giveaway",
-    "aide",
-    "verrouiller",
-    "journaux",
-    "moderation",
-    "owner",        # anciennement créateur.py
+    "help",            # anciennement aide.py
+    "lock",            # anciennement verrouiller.py
+    "logs",            # anciennement journaux.py
+    "moderation",      # anciennement modération.py
+    "owner",           # anciennement créateur.py
     "message_channel",
-    "policy",       # anciennement règles.py
+    "policy",          # anciennement règles.py
     "snipe",
-    "bienvenue"
+    "welcome",         # anciennement bienvenue.py
+    "partnership"      # nouveau cog pour le salon partenariat
 ]
 
 # --- Chargement des cogs (discord.py 2.x) ---
