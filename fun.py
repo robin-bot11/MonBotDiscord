@@ -1,3 +1,4 @@
+# fun.py
 from discord.ext import commands
 
 class Fun(commands.Cog):
@@ -13,5 +14,6 @@ class Fun(commands.Cog):
             "Aucun obstacle ne peut t'arrêter, tu es un véritable modèle pour tous !"
         )
 
-def setup(bot):
-    bot.add_cog(Fun(bot))
+# ✅ Correct pour Discord.py 2.x
+async def setup(bot):
+    await bot.add_cog(Fun(bot))
