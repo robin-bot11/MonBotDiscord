@@ -1,79 +1,27 @@
-import discord
 from discord.ext import commands
+import discord
 
-OWNER_ID = 1383790178522370058
 COLOR = 0x6b00cb
 
-class Help(commands.Cog):
+class Aide(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="help")
-    async def help_command(self, ctx):
-        is_owner = ctx.author.id == OWNER_ID
-
-        embed = discord.Embed(
-            title="Aide du bot",
-            description="Voici les commandes disponibles",
-            color=COLOR
-        )
-
-        # Modération
-        embed.add_field(
-            name="Modération",
-            value=(
-                "+kick <ID> <raison>\n"
-                "+ban <ID> <raison>\n"
-                "+uban <ID>\n"
-                "+mute <ID>\n"
-                "+umute <ID>\n"
-                "+warn <ID> <raison>\n"
-                "+warns <ID>\n"
-                "+delwarn <ID> <numéro warn>"
-            ),
-            inline=False
-        )
-
-        # Giveaway
-        embed.add_field(
-            name="Giveaway",
-            value=(
-                "+gyveaway <durée> <récompense>\n"
-                "+gyend <ID>\n"
-                "+gyrestart <ID>\n"
-                "+gyrole <ID rôle>"
-            ),
-            inline=False
-        )
-
-        # Autres commandes
-        embed.add_field(
-            name="Autres",
-            value="+papa\n+snipe\n+reglement",
-            inline=False
-        )
-
-        # Commandes propriétaire
-        if is_owner:
-            embed.add_field(
-                name="Propriétaire",
-                value=(
-                    "+shutdown\n"
-                    "+restart\n"
-                    "+poweron\n"
-                    "+status <texte>\n"
-                    "+eval <code>\n"
-                    "+backupconfig\n"
-                    "+restoreconfig"
-                ),
-                inline=False
-            )
-
-        try:
-            await ctx.author.send(embed=embed)
-            await ctx.reply("La liste des commandes a été envoyée en message privé.")
-        except discord.Forbidden:
-            await ctx.reply("Je ne peux pas t’envoyer de message privé.")
+    @commands.command()
+    async def help(self, ctx, page=None):
+        pages = {
+            "modération": "+kick <ID> <raison>\n+ban <ID> <raison>\n+uban <ID>\n+mute <ID> <durée> <raison>\n+umute <ID>\n+warn <ID> <raison>\n+warns <ID>\n+delswarn <ID> <num>",
+            "fun": "+papa",
+            "giveaway": "+gyrole <ID rôle>\n+gyveaway <durée> <récompense>\n+gyend <ID>\n+gyrestart <ID>",
+            "bienvenue": "+setwelcome <message>\n+setwelcomechannel <#salon>",
+            "logs": "+setlog <type> <#salon>",
+            "règlement": "+reglement"
+        }
+        if page and page.lower() in pages:
+            await ctx.author.send(f"Page {page} :\n{pages[page.lower()]}")
+        else:
+            desc = "\n".join([f"{k}" for k in pages])
+            await ctx.author.send(f"Pages d'aide disponibles :\n{desc}")
 
 def setup(bot):
-    bot.add_cog(Help(bot))
+    bot.add_cog(Aide(bot))
