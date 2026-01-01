@@ -1,20 +1,14 @@
 from discord.ext import commands
-import discord
-
-COLOR = 0x6b00cb
 
 class Rules(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command()
-    async def reglement(self, ctx, *, texte):
-        embed = discord.Embed(
-            title="Règlement du serveur",
-            description=texte,
-            color=COLOR
-        )
-        await ctx.send(embed=embed)
+    @commands.has_permissions(administrator=True)
+    async def reglement(self, ctx, titre, texte, role: str):
+        role_msg = f"Rôle à attribuer: {role}" if role.lower() != "aucun" else "Pas de rôle attribué"
+        await ctx.send(f"**{titre}**\n{texte}\n{role_msg}")
 
 def setup(bot):
     bot.add_cog(Rules(bot))
