@@ -1,120 +1,77 @@
 # database.py
 import json
 import os
-import shutil
-
-DB_FILE = "database.json"
-BACKUP_FILE = "database_backup.json"
+from copy import deepcopy
 
 class Database:
-    def __init__(self):
-        # Crée le fichier si il n'existe pas
-        if not os.path.exists(DB_FILE):
-            with open(DB_FILE, "w", encoding="utf-8") as f:
-                json.dump({
-                    "warns": {},
-                    "welcome": {},
-                    "gyroles": [],
-                    "lock_roles": {},
-                    "rules": {},
-                    "snipes": {}
-                }, f, indent=4)
-        self.load()
+    def __init__(self, file_path="database.json"):
+        self.file_path = file_path
+        self.data = {
+            "warns": {},
+            "config": {}
+        }
+        self._load()
 
-    # --- Chargement et sauvegarde ---
-    def load(self):
-        with open(DB_FILE, "r", encoding="utf-8") as f:
-            self.data = json.load(f)
+    # ------------------ LOAD ------------------
+    def _load(self):
+        if os.path.exists(self.file_path):
+            try:
+                with open(self.file_path, "r", encoding="utf-8") as f:
+                    self.data = json.load(f)
+            except Exception:
+                print("Erreur chargement database.json, création d'une base neuve")
+                self._save()
+        else:
+            self._save()
 
-    def save(self):
-        with open(DB_FILE, "w", encoding="utf-8") as f:
+    # ------------------ SAVE ------------------
+    def _save(self):
+        with open(self.file_path, "w", encoding="utf-8") as f:
             json.dump(self.data, f, indent=4, ensure_ascii=False)
 
-    # --- Backup / Restore ---
+    # ------------------ WARNS ------------------
+    def add_warn(self, guild_id, user_id, reason):
+        guild_id = str(guild_id)
+        user_id = str(user_id)
+
+        self.data["warns"].setdefault(guild_id, {})
+        self.data["warns"][guild_id].setdefault(user_id, [])
+
+        self.data["warns"][guild_id][user_id].append(reason)
+        self._save()
+
+    def get_warns(self, guild_id, user_id):
+        return self.data["warns"].get(str(guild_id), {}).get(str(user_id), [])
+
+    def clear_warns(self, guild_id, user_id):
+        guild_id = str(guild_id)
+        user_id = str(user_id)
+
+        if guild_id in self.data["warns"]:
+            self.data["warns"][guild_id].pop(user_id, None)
+            self._save()
+
+    # ------------------ CONFIG ------------------
+    def set_config(self, guild_id, key, value):
+        guild_id = str(guild_id)
+        self.data["config"].setdefault(guild_id, {})
+        self.data["config"][guild_id][key] = value
+        self._save()
+
+    def get_config(self, guild_id, key, default=None):
+        return self.data["config"].get(str(guild_id), {}).get(key, default)
+
+    # ------------------ BACKUP ------------------
     def backup(self):
-        """Créer une copie du fichier de base de données"""
-        shutil.copy(DB_FILE, BACKUP_FILE)
+        with open("backup.json", "w", encoding="utf-8") as f:
+            json.dump(self.data, f, indent=4, ensure_ascii=False)
 
+    # ------------------ RESTORE ------------------
     def restore(self):
-        """Restaurer la base de données depuis le backup"""
-        if os.path.exists(BACKUP_FILE):
-            shutil.copy(BACKUP_FILE, DB_FILE)
-            self.load()
-            return True
-        return False
+        if not os.path.exists("backup.json"):
+            raise FileNotFoundError("Aucune sauvegarde trouvée")
 
-    # --- Warns ---
-    def add_warn(self, member_id, reason, staff, date):
-        self.data.setdefault("warns", {}).setdefault(str(member_id), []).append({
-            "reason": reason,
-            "staff": staff,
-            "date": date
-        })
-        self.save()
+        with open("backup.json", "r", encoding="utf-8") as f:
+            self.data = json.load(f)
 
-    def get_warns(self, member_id):
-        return self.data.get("warns", {}).get(str(member_id), [])
-
-    def del_warn(self, member_id, index):
-        if str(member_id) in self.data.get("warns", {}):
-            if 0 <= index < len(self.data["warns"][str(member_id)]):
-                del self.data["warns"][str(member_id)][index]
-                self.save()
-                return True
-        return False
-
-    # --- Welcome ---
-    def set_welcome_message(self, guild_id, message):
-        self.data.setdefault("welcome", {}).setdefault(str(guild_id), {})["message"] = message
-        self.save()
-
-    def set_welcome_channel(self, guild_id, channel_id):
-        self.data.setdefault("welcome", {}).setdefault(str(guild_id), {})["channel"] = channel_id
-        self.save()
-
-    def get_welcome(self, guild_id):
-        return self.data.get("welcome", {}).get(str(guild_id), {})
-
-    # --- Giveaway roles ---
-    def add_gyrole(self, role_id):
-        if role_id not in self.data.get("gyroles", []):
-            self.data["gyroles"].append(role_id)
-            self.save()
-
-    def remove_gyrole(self, role_id):
-        if role_id in self.data.get("gyroles", []):
-            self.data["gyroles"].remove(role_id)
-            self.save()
-
-    def get_gyroles(self):
-        return self.data.get("gyroles", [])
-
-    # --- Lock roles ---
-    def set_lock_roles(self, guild_id, roles):
-        self.data.setdefault("lock_roles", {})[str(guild_id)] = roles
-        self.save()
-
-    def get_lock_roles(self, guild_id):
-        return self.data.get("lock_roles", {}).get(str(guild_id), [])
-
-    # --- Règlement ---
-    def set_rule(self, guild_id, title, text, role_id, button_text, emoji):
-        self.data.setdefault("rules", {})[str(guild_id)] = {
-            "title": title,
-            "text": text,
-            "role": role_id,
-            "button": button_text,
-            "emoji": emoji
-        }
-        self.save()
-
-    def get_rule(self, guild_id):
-        return self.data.get("rules", {}).get(str(guild_id), {})
-
-    # --- Snipes ---
-    def set_snipe(self, channel_id, message):
-        self.data.setdefault("snipes", {})[str(channel_id)] = message
-        self.save()
-
-    def get_snipe(self, channel_id):
-        return self.data.get("snipes", {}).get(str(channel_id))
+        self._save()
