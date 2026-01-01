@@ -25,7 +25,13 @@ class Lock(commands.Cog):
         targets = ctx.guild.channels if channel is None else [channel]
         for ch in targets:
             for role in self.lock_roles:
-                await ch.set_permissions(role, send_messages=False, add_reactions=False, attach_files=False, use_external_emojis=False)
+                await ch.set_permissions(
+                    role,
+                    send_messages=False,
+                    add_reactions=False,
+                    attach_files=False,
+                    use_external_emojis=False
+                )
         nom = "tout le serveur" if channel is None else channel.name
         roles_mention = ", ".join([role.mention for role in self.lock_roles])
         await ctx.send(f"{nom} est maintenant verrouillé pour les rôles : {roles_mention}")
@@ -37,10 +43,17 @@ class Lock(commands.Cog):
         targets = ctx.guild.channels if channel is None else [channel]
         for ch in targets:
             for role in self.lock_roles:
-                await ch.set_permissions(role, send_messages=True, add_reactions=True, attach_files=True, use_external_emojis=True)
+                await ch.set_permissions(
+                    role,
+                    send_messages=True,
+                    add_reactions=True,
+                    attach_files=True,
+                    use_external_emojis=True
+                )
         nom = "tout le serveur" if channel is None else channel.name
         roles_mention = ", ".join([role.mention for role in self.lock_roles])
         await ctx.send(f"{nom} est maintenant déverrouillé pour les rôles : {roles_mention}")
 
-def setup(bot):
-    bot.add_cog(Lock(bot))
+# ✅ Correct pour Discord.py 2.x
+async def setup(bot):
+    await bot.add_cog(Lock(bot))
