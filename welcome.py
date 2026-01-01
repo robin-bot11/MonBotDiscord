@@ -10,7 +10,6 @@ class Welcome(commands.Cog):
         self.message = "Bienvenue {user} sur {server} !"
 
     @commands.command()
-    @commands.has_permissions(administrator=True)
     async def setwelcome(self, ctx, *, message):
         self.message = message
         await ctx.send(embed=discord.Embed(
@@ -19,7 +18,6 @@ class Welcome(commands.Cog):
         ))
 
     @commands.command()
-    @commands.has_permissions(administrator=True)
     async def setwelcomechannel(self, ctx, channel: discord.TextChannel):
         self.channel = channel
         await ctx.send(embed=discord.Embed(
