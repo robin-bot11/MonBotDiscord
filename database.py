@@ -15,8 +15,9 @@ class Database:
                     "gyroles": [],
                     "lock_roles": {},
                     "rules": {},
-                    "snipes": {}
-                }, f, indent=4)
+                    "snipes": {},
+                    "partner": {}  # Nouvelle section pour le partenariat
+                }, f, indent=4, ensure_ascii=False)
         self.load()
 
     # ------------------ Chargement et sauvegarde ------------------
@@ -31,11 +32,13 @@ class Database:
     # ------------------ Backup / Restore ------------------
     def backup(self):
         shutil.copy(DB_FILE, "backup.json")
+        print("✅ Base de données sauvegardée (incluant partenaire)")
 
     def restore(self):
         if os.path.exists("backup.json"):
             shutil.copy("backup.json", DB_FILE)
             self.load()
+            print("✅ Base de données restaurée (incluant partenaire)")
 
     # ------------------ Warns ------------------
     def add_warn(self, member_id, reason, staff, date):
@@ -115,3 +118,11 @@ class Database:
 
     def get_snipe(self, channel_id):
         return self.data["snipes"].get(str(channel_id))
+
+    # ------------------ Partenariat ------------------
+    def set_partner_role(self, guild_id, role_id):
+        self.data["partner"][str(guild_id)] = role_id
+        self.save()
+
+    def get_partner_role(self, guild_id):
+        return self.data["partner"].get(str(guild_id))
