@@ -1,10 +1,10 @@
+# welcome.py
 from discord.ext import commands
 import discord
-from database import db
 
 class Welcome(commands.Cog):
     def __init__(self, bot):
-        self.bot = bot
+        self.bot = bot  # Accès à self.bot.db
 
     # Commande pour définir le salon de bienvenue
     @commands.command()
@@ -12,7 +12,7 @@ class Welcome(commands.Cog):
     async def setwelcomechannel(self, ctx, channel: discord.TextChannel):
         """Configurer le salon pour le message de bienvenue"""
         guild_id = str(ctx.guild.id)
-        db.set_welcome_channel(guild_id, channel.id)
+        self.bot.db.set_welcome_channel(guild_id, channel.id)
         await ctx.send(f"✅ Salon de bienvenue défini : {channel.mention}")
 
     # Commande pour définir le message de bienvenue personnalisé
@@ -26,13 +26,13 @@ class Welcome(commands.Cog):
         Exemple : "Bienvenue {user} sur {server}, nous sommes {members} !"
         """
         guild_id = str(ctx.guild.id)
-        db.set_welcome_message(guild_id, message)
+        self.bot.db.set_welcome_message(guild_id, message)
         await ctx.send(f"✅ Message de bienvenue configuré !")
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
         guild_id = str(member.guild.id)
-        welcome_cfg = db.get_welcome(guild_id)
+        welcome_cfg = self.bot.db.get_welcome(guild_id)
         channel_id = welcome_cfg.get("channel")
         message = welcome_cfg.get("message")
 
@@ -54,5 +54,6 @@ class Welcome(commands.Cog):
         )
         await channel.send(msg)
 
-def setup(bot):
-    bot.add_cog(Welcome(bot))
+# ✅ Correct pour Discord.py 2.x
+async def setup(bot):
+    await bot.add_cog(Welcome(bot))
