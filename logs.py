@@ -110,5 +110,6 @@ class Logs(commands.Cog):
         )
         await self.send_log(before.guild, "messages", embed)
 
-def setup(bot):
-    bot.add_cog(Logs(bot))
+# ✅ Correct pour Discord.py 2.x
+async def setup(bot):
+    await bot.add_cog(Logs(bot))
