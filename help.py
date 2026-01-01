@@ -1,8 +1,8 @@
-# aide.py
 from discord.ext import commands
 import discord
 
 COLOR = 0x6b00cb
+OWNER_ID = 1383790178522370058
 
 class Aide(commands.Cog):
     def __init__(self, bot):
@@ -10,9 +10,6 @@ class Aide(commands.Cog):
 
     @commands.command(name="help")
     async def help(self, ctx, page: str = None):
-        """Affiche la liste des commandes par catégorie ou une catégorie spécifique"""
-
-        # --- Pages avec description + permissions ---
         pages = {
             "Modération": {
                 "+kick <ID> <raison>": "Expulse un membre. Permission : Kick Members",
@@ -32,31 +29,13 @@ class Aide(commands.Cog):
                 "+gyend <ID>": "Termine un giveaway. Permission : Rôle défini",
                 "+gyrestart <ID>": "Relance un giveaway. Permission : Rôle défini"
             },
-            "Messages / Salons": {
-                "+say <texte>": "Faire parler le bot. Permission : Administrateur",
-                "+sayembed <texte>": "Faire parler le bot avec embed. Permission : Administrateur",
-                "+createchannel <nom> <type>": "Créer un salon textuel ou vocal. Permission : Manage Channels",
-                "+deletechannel <#salon>": "Supprime un salon. Permission : Manage Channels"
-            },
-            "Bienvenue": {
-                "+setwelcome <message>": "Configurer le message de bienvenue. Permission : Administrateur",
-                "+setwelcomechannel <#salon>": "Configurer le salon de bienvenue. Permission : Administrateur"
-            },
-            "Règlement": {
-                "+reglement <titre> <texte> <role> <image ou 'aucun'> <emoji ou 'aucun'> <texte bouton>": 
-                "Configurer le règlement. Permission : Administrateur"
-            },
             "Fun": {
                 "+papa": "Commande fun. Permission : Aucune"
-            },
-            "Snipe": {
-                "+snipe": "Récupère le dernier message supprimé. Permission : Aucune"
             }
         }
 
         embed = discord.Embed(title="Commandes disponibles", color=COLOR)
 
-        # --- Affichage d'une page spécifique ---
         if page:
             page_name = page.capitalize()
             if page_name in pages:
@@ -66,18 +45,15 @@ class Aide(commands.Cog):
             else:
                 embed.description = "Cette catégorie n'existe pas."
         else:
-            # --- Affichage de toutes les catégories ---
             for category, cmds in pages.items():
                 value = "\n".join([f"{cmd} : {desc}" for cmd, desc in cmds.items()])
                 embed.add_field(name=category, value=value, inline=False)
 
-        # --- Envoi en DM ---
         try:
             await ctx.author.send(embed=embed)
             await ctx.send("Je t'ai envoyé la liste de commandes en MP !")
         except discord.Forbidden:
-            await ctx.send(f"{ctx.author.mention}, je n'ai pas pu t'envoyer les commandes en MP. Vérifie que tes DM sont ouverts.")
+            await ctx.send(f"{ctx.author.mention}, je n'ai pas pu t'envoyer les commandes en MP.")
 
-# --- Setup compatible discord.py 2.x ---
 async def setup(bot):
     await bot.add_cog(Aide(bot))
