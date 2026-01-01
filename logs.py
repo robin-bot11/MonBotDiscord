@@ -17,10 +17,7 @@ class Logs(commands.Cog):
         if guild_id not in self.channels:
             self.channels[guild_id] = {}
         self.channels[guild_id][log_type.lower()] = channel.id
-        await ctx.send(embed=discord.Embed(
-            description=f"Salon configuré pour {log_type} : {channel.mention}",
-            color=COLOR
-        ))
+        await ctx.send(f"Salon configuré pour {log_type} : {channel.mention}")
 
     async def send_log(self, guild, log_type, embed):
         """Envoyer un embed dans le salon configuré pour le type de log"""
@@ -31,6 +28,7 @@ class Logs(commands.Cog):
             if channel:
                 await channel.send(embed=embed)
 
+    # --- Membres ---
     @commands.Cog.listener()
     async def on_member_join(self, member):
         embed = discord.Embed(
@@ -51,25 +49,26 @@ class Logs(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
-        changes = []
+        changements = []
         if before.nick != after.nick:
-            changes.append(f"Pseudo : {before.nick} → {after.nick}")
+            changements.append(f"Pseudo : {before.nick} → {after.nick}")
         before_roles = set(before.roles)
         after_roles = set(after.roles)
-        added_roles = after_roles - before_roles
-        removed_roles = before_roles - after_roles
-        if added_roles:
-            changes.append("Rôles ajoutés : " + ", ".join(r.name for r in added_roles))
-        if removed_roles:
-            changes.append("Rôles retirés : " + ", ".join(r.name for r in removed_roles))
-        if changes:
+        ajoutes = after_roles - before_roles
+        supprimes = before_roles - after_roles
+        if ajoutes:
+            changements.append("Rôles ajoutés : " + ", ".join(r.name for r in ajoutes))
+        if supprimes:
+            changements.append("Rôles retirés : " + ", ".join(r.name for r in supprimes))
+        if changements:
             embed = discord.Embed(
                 title=f"Membre mis à jour : {after}",
-                description="\n".join(changes),
+                description="\n".join(changements),
                 color=COLOR
             )
             await self.send_log(after.guild, "membres", embed)
 
+    # --- Salons ---
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):
         embed = discord.Embed(
@@ -88,6 +87,7 @@ class Logs(commands.Cog):
         )
         await self.send_log(channel.guild, "salon", embed)
 
+    # --- Messages ---
     @commands.Cog.listener()
     async def on_message_delete(self, message):
         if message.author.bot:
