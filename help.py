@@ -1,3 +1,4 @@
+
 from discord.ext import commands
 import discord
 
@@ -9,18 +10,54 @@ class Aide(commands.Cog):
 
     @commands.command()
     async def help(self, ctx, page: str = None):
+        # Définir les pages par catégorie
         pages = {
-            "modération": "+kick, +ban, +mute, +unmute, +warn, +uwarn, +delwarn, +snipe",
-            "giveaway": "+gyrole, +gyveaway, +gyend, +gyrestart",
-            "fun": "+papa",
-            "welcome": "+setwelcome, +setwelcomechannel",
-            "logs": "+setlog"
+            "Modération": [
+                "+kick <ID> <raison>",
+                "+ban <ID> <raison>",
+                "+uban <ID>",
+                "+mute <ID> <raison>",
+                "+umute <ID>",
+                "+warn <ID> <raison>",
+                "+uwarn <ID> <num_warn>",
+                "+delwarn <ID> <num_warn>",
+                "+slowmode <#salon> <durée>"
+            ],
+            "Giveaway": [
+                "+gyveaway <durée> <récompense>",
+                "+gyrole <ID rôle>",
+                "+gyend <ID>",
+                "+gyrestart <ID>"
+            ],
+            "Bienvenue": [
+                "+setwelcome <message>",
+                "+setwelcomechannel <#salon>"
+            ],
+            "Règlement": [
+                "+reglement <titre> <texte> <role> <image ou 'aucun'> <emoji ou 'aucun'> <texte bouton>"
+            ],
+            "Fun": [
+                "+papa"
+            ],
+            "Snipe": [
+                "+snipe"
+            ]
         }
-        if page and page.lower() in pages:
-            await ctx.author.send(f"**{page.capitalize()} :**\n{pages[page.lower()]}")
+
+        embed = discord.Embed(title="Commandes disponibles", color=COLOR)
+        if page:
+            # Page spécifique
+            page_name = page.capitalize()
+            if page_name in pages:
+                embed.add_field(name=page_name, value="\n".join(pages[page_name]), inline=False)
+            else:
+                embed.description = "Cette catégorie n'existe pas."
         else:
-            msg = "Pages disponibles : " + ", ".join(pages.keys())
-            await ctx.author.send(msg)
+            # Toutes les pages
+            for name, cmds in pages.items():
+                embed.add_field(name=name, value="\n".join(cmds), inline=False)
+        await ctx.author.send(embed=embed)
+        await ctx.send("Je t'ai envoyé la liste de commandes en MP !")
 
 def setup(bot):
     bot.add_cog(Aide(bot))
