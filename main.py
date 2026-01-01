@@ -3,13 +3,13 @@ import discord
 from discord.ext import commands
 import logging
 
-# --- Logs propres ---
+# --- Logs ---
 logging.basicConfig(level=logging.INFO)
 
 # --- Intents ---
 intents = discord.Intents.all()
 
-# --- Bot Discord ---
+# --- Bot ---
 bot = commands.Bot(command_prefix="+", intents=intents, help_command=None)
 
 # --- Token depuis Railway ---
@@ -17,7 +17,7 @@ TOKEN = os.getenv("DISCORD_TOKEN") or os.getenv("JETON_DISCORD")
 if not TOKEN:
     raise ValueError("Le token Discord n'a pas été trouvé ! Assurez-vous qu'il est défini dans Railway.")
 
-# --- Liste des cogs à charger ---
+# --- Liste des cogs ---
 COGS = [
     "fun",
     "giveaway",
