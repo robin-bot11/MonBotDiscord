@@ -8,20 +8,19 @@ class Aide(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def help(self, ctx, page=None):
+    async def help(self, ctx, page: str = None):
         pages = {
-            "modération": "+kick <ID> <raison>\n+ban <ID> <raison>\n+uban <ID>\n+mute <ID> <durée> <raison>\n+umute <ID>\n+warn <ID> <raison>\n+warns <ID>\n+delswarn <ID> <num>",
+            "modération": "+kick, +ban, +mute, +unmute, +warn, +uwarn, +delwarn, +snipe",
+            "giveaway": "+gyrole, +gyveaway, +gyend, +gyrestart",
             "fun": "+papa",
-            "giveaway": "+gyrole <ID rôle>\n+gyveaway <durée> <récompense>\n+gyend <ID>\n+gyrestart <ID>",
-            "bienvenue": "+setwelcome <message>\n+setwelcomechannel <#salon>",
-            "logs": "+setlog <type> <#salon>",
-            "règlement": "+reglement"
+            "welcome": "+setwelcome, +setwelcomechannel",
+            "logs": "+setlog"
         }
         if page and page.lower() in pages:
-            await ctx.author.send(f"Page {page} :\n{pages[page.lower()]}")
+            await ctx.author.send(f"**{page.capitalize()} :**\n{pages[page.lower()]}")
         else:
-            desc = "\n".join([f"{k}" for k in pages])
-            await ctx.author.send(f"Pages d'aide disponibles :\n{desc}")
+            msg = "Pages disponibles : " + ", ".join(pages.keys())
+            await ctx.author.send(msg)
 
 def setup(bot):
     bot.add_cog(Aide(bot))
