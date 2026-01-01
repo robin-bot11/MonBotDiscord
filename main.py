@@ -13,8 +13,10 @@ TOKEN = os.getenv("JETON_DISCORD")
 if not TOKEN:
     raise ValueError("Le token Discord n'a pas été trouvé !")
 
-bot.db = Database()  # Base de données partagée
+# Base de données partagée
+bot.db = Database()
 
+# Liste des cogs
 cogs = [
     "fun",
     "giveaway",
