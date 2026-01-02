@@ -1,6 +1,7 @@
 from discord.ext import commands
 import discord
 from storx import Database  # Correction ici
+
 COLOR = 0x6b00cb
 
 class Policy(commands.Cog):
