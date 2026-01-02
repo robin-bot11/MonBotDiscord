@@ -1,3 +1,4 @@
+# main.py
 import os
 import discord
 from discord.ext import commands
@@ -29,13 +30,13 @@ cogs = [
     "lock",            # anciennement verrouiller.py
     "logs",            # anciennement journaux.py
     "moderation",      # anciennement modération.py
-    "owner",           # anciennement propriétaire.py
+    "owner",           # anciennement créateur.py
     "message_channel",
-    "policy",          # anciennement politique.py
+    "policy",          # anciennement règles.py
     "snipe",
     "welcome",         # anciennement bienvenue.py
-    "partnership",     # salon partenariat
-    "verification"     # nouveau cog de vérification
+    "partnership",     # nouveau cog pour le salon partenariat
+    "verification"     # nouveau cog pour le système de vérification
 ]
 
 # --- Chargement des cogs (discord.py 2.x) ---
