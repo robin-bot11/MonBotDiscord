@@ -104,9 +104,9 @@ class HelpSelect(discord.ui.Select):
         elif cat == "Vérification":
             embed.title = "Vérification"
             embed.description = (
-                "**+setverifyrole `<@rôle>`**\n↳ Définit le rôle à donner après vérification\n\n"
-                "**+setunverifiedrole `<@rôle>`**\n↳ Définit le rôle à retirer après vérification (optionnel)\n\n"
-                "**+sendverify `<#salon>` `<titre>` <description>`**\n↳ Envoie l'embed interactif de vérification"
+                "**+setupverify**\n↳ Lance la configuration interactive complète de la vérification\n\n"
+                "Inclut : titre, description, texte du bouton, rôle à donner après vérification, "
+                "rôle d'isolation automatique, message interactif avec sélection d'emoji et 3 essais max"
             )
 
         # ---------------- Owner ----------------
