@@ -1,18 +1,24 @@
+# charlie3.py
 from discord.ext import commands
 import discord
 from datetime import datetime
+from storx import Database  # Pour récupérer les salons de logs dynamiquement
 
 COLOR = 0x6b00cb
 
 class Logs(commands.Cog):
+    """Cog pour gérer tous les logs : rôles, timeout, warns"""
+
     def __init__(self, bot):
         self.bot = bot
+        self.db = Database()  # Instance de la base pour les logs
 
     # --------------------------------------------------
     # UTILITAIRE
     # --------------------------------------------------
-    async def send_log(self, guild, log_type, embed):
-        channel_id = self.bot.db.get_log_channel(guild.id, log_type)
+    async def send_log(self, guild: discord.Guild, log_type: str, embed: discord.Embed):
+        """Envoie un embed dans le salon de logs configuré pour le type"""
+        channel_id = self.db.get_log_channel(guild.id, log_type)
         if not channel_id:
             return
         channel = guild.get_channel(channel_id)
@@ -23,8 +29,7 @@ class Logs(commands.Cog):
     # ROLES — AJOUT / RETRAIT
     # ==================================================
     @commands.Cog.listener()
-    async def on_member_update(self, before, after):
-        # Roles ajoutés
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
         added_roles = [r for r in after.roles if r not in before.roles]
         removed_roles = [r for r in before.roles if r not in after.roles]
 
@@ -70,7 +75,7 @@ class Logs(commands.Cog):
     # TIMEOUT (MODÉRATION)
     # ==================================================
     @commands.Cog.listener()
-    async def on_member_update_timeout(self, before, after):
+    async def on_member_update_timeout(self, before: discord.Member, after: discord.Member):
         if before.communication_disabled_until == after.communication_disabled_until:
             return
 
@@ -78,7 +83,6 @@ class Logs(commands.Cog):
             if entry.target.id != after.id:
                 continue
 
-            # Timeout ajouté
             if after.communication_disabled_until:
                 embed = discord.Embed(
                     title="⏱️ Timeout appliqué",
@@ -93,8 +97,6 @@ class Logs(commands.Cog):
                     inline=False
                 )
                 embed.add_field(name="Raison", value=entry.reason or "Aucune", inline=False)
-
-            # Timeout retiré
             else:
                 embed = discord.Embed(
                     title="🔓 Timeout retiré",
@@ -110,12 +112,8 @@ class Logs(commands.Cog):
     # ==================================================
     # WARN (via audit logs / raison)
     # ==================================================
-    @commands.Cog.listener()
-    async def on_member_warn(self, guild, member, moderator, reason):
-        """
-        ⚠️ Cette fonction doit être appelée MANUELLEMENT
-        depuis ta commande +warn
-        """
+    async def log_warn(self, guild: discord.Guild, member: discord.Member, moderator: discord.Member, reason: str):
+        """⚠️ Logger un warn (appelé depuis la commande +warn)"""
         embed = discord.Embed(
             title="⚠️ Avertissement",
             color=COLOR,
@@ -124,7 +122,6 @@ class Logs(commands.Cog):
         embed.add_field(name="Membre", value=member.mention, inline=False)
         embed.add_field(name="Modérateur", value=moderator.mention, inline=False)
         embed.add_field(name="Raison", value=reason or "Aucune", inline=False)
-
         await self.send_log(guild, "mod", embed)
 
 # --------------------------------------------------
