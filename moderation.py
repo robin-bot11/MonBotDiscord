@@ -149,7 +149,7 @@ class Moderation(commands.Cog):
         if not member:
             return await ctx.send("Membre introuvable avec cet ID.")
         date = datetime.utcnow().strftime("%Y-%m-%d")
-        self.db.add_warn(member_id, reason, ctx.author.name, date)
+        self.db.add_warn(ctx.guild.id, member_id, reason, ctx.author.name, date)
         try:
             await member.send(f"Vous avez reçu un avertissement sur {ctx.guild.name}. Raison : {reason}")
         except:
@@ -168,7 +168,7 @@ class Moderation(commands.Cog):
         member = ctx.guild.get_member(member_id)
         if not member:
             return await ctx.send("Membre introuvable avec cet ID.")
-        data = self.db.get_warns(member_id)
+        data = self.db.get_warns(ctx.guild.id, member_id)
         if not data:
             return await ctx.send(f"{member.display_name} n'a aucun avertissement.")
         msg = f"Warns de {member.display_name} :\n"
@@ -180,7 +180,7 @@ class Moderation(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_messages=True)
     async def unwarn(self, ctx, member_id: int, warn_number: int):
-        success = self.db.del_warn(member_id, warn_number - 1)
+        success = self.db.del_warn(ctx.guild.id, member_id, warn_number - 1)
         member = ctx.guild.get_member(member_id)
         if success:
             await ctx.send(f"Le warn {warn_number} pour {member.mention} a été supprimé.")
@@ -216,6 +216,6 @@ class Moderation(commands.Cog):
         if isinstance(error, commands.MissingPermissions):
             await ctx.send("Vous n'avez pas la permission de gérer les messages.")
 
-# ✅ Correct pour Discord.py 2.x
+# ------------------ Setup ------------------
 async def setup(bot):
     await bot.add_cog(Moderation(bot))
