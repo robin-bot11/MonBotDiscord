@@ -17,7 +17,7 @@ class Database:
                     "rules": {},
                     "snipes": {},
                     "partner": {},
-                    "logs": {}  # Nouvelle section pour les logs
+                    "logs": {}  # Logs ajoutés
                 }, f, indent=4, ensure_ascii=False)
         self.load()
 
@@ -99,13 +99,14 @@ class Database:
         return self.data["lock_roles"].get(str(guild_id), [])
 
     # ------------------ Règlement ------------------
-    def set_rule(self, guild_id, title, text, role_id, button_text, emoji):
+    def set_rule(self, guild_id, title, text, role_id, button_text, emoji, image=None):
         self.data["rules"][str(guild_id)] = {
             "title": title,
             "text": text,
             "role": role_id,
             "button": button_text,
-            "emoji": emoji
+            "emoji": emoji,
+            "image": image
         }
         self.save()
 
