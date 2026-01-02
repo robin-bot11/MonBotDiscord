@@ -1,9 +1,9 @@
-# aide_pro_copy.py
 from discord.ext import commands
 import discord
 
 OWNER_ID = 1383790178522370058
 
+# ---------------- Couleurs par catégorie ----------------
 CATEGORY_STYLES = {
     "Modération": 0xE74C3C,
     "Logs": 0xF1C40F,
@@ -16,112 +16,96 @@ CATEGORY_STYLES = {
     "Owner": 0x6b00cb
 }
 
-COMMANDS_INFO = {
-    # Exemple pour toutes les catégories, à compléter
+# ---------------- Exemples + conseils avancés ----------------
+COMMAND_DETAILS = {
     "kick": {
-        "syntax": "+kick <ID> [raison]",
-        "example": "+kick 123456789012345678 Spam",
-        "desc": "Expulse un membre du serveur.",
-        "tips": "Vérifie que le membre n’est pas Admin ou supérieur."
+        "example": "+kick <ID> Spam",
+        "tip": "Expulse un membre du serveur.",
+        "shortcut": "Tu peux aussi utiliser +timeout pour mute temporaire.",
+        "notes": "Ne peut pas expulser les membres avec un rôle supérieur au bot."
     },
-    "ping": {
-        "syntax": "+ping",
-        "example": "+ping",
-        "desc": "Teste si le bot est en ligne.",
-        "tips": "Utile pour vérifier la réactivité."
+    "ban": {
+        "example": "+ban <ID> Raid",
+        "tip": "Bannit un membre.",
+        "shortcut": "Peut combiner avec +eval pour automatisation avancée.",
+        "notes": "Vérifie les permissions avant de ban."
     },
     "setstatus": {
-        "syntax": "+setstatus <online|idle|dnd|invisible> [activité]",
-        "example": "+setstatus online Joueur en ligne",
-        "desc": "Change le statut et activité du bot.",
-        "tips": "Ex : 'Playing', 'Streaming', 'Listening'."
+        "example": "+setstatus en ligne | Jouant à Discord",
+        "tip": "Change le statut du bot.",
+        "shortcut": "Format : <state> | <activity>.",
+        "notes": "Les statuts possibles : en ligne, hors ligne, invisible, occupé."
     },
-    # Ajoute ici toutes tes autres commandes avec syntax, example, desc, tips
+    "shutdownbot": {
+        "example": "+shutdownbot",
+        "tip": "Éteint le bot.",
+        "shortcut": "Utiliser seulement si tu as accès à Railway ou déploiement.",
+        "notes": "Commande irréversible, demande confirmation."
+    }
+    # Ajoute toutes tes commandes ici
 }
 
-# ---------------- Select pour chaque commande ----------------
-class CommandSelect(discord.ui.Select):
-    def __init__(self, commands_list, category, parent_view):
-        options = [
-            discord.SelectOption(label=cmd, description=COMMANDS_INFO.get(cmd, {}).get("desc", "")[:50])
-            for cmd in commands_list
-        ]
-        super().__init__(placeholder="Sélectionne une commande", min_values=1, max_values=1, options=options)
-        self.category = category
-        self.parent_view = parent_view
+# ---------------- Bouton pour ouvrir mini embed ----------------
+class CommandDetailButton(discord.ui.Button):
+    def __init__(self, cmd_name):
+        super().__init__(label=f"{cmd_name}", style=discord.ButtonStyle.blurple)
+        self.cmd_name = cmd_name
 
     async def callback(self, interaction: discord.Interaction):
-        cmd_name = self.values[0]
-        info = COMMANDS_INFO.get(cmd_name, {})
+        details = COMMAND_DETAILS.get(self.cmd_name)
+        if not details:
+            await interaction.response.send_message("Pas de détails disponibles.", ephemeral=True)
+            return
+
         embed = discord.Embed(
-            title=f"📌 {cmd_name} ({self.category})",
-            description=info.get("desc", "Pas de description."),
-            color=CATEGORY_STYLES.get(self.category, 0x6b00cb)
+            title=f"Commande : {self.cmd_name}",
+            color=0x6b00cb
         )
-        embed.add_field(name="Syntaxe", value=info.get("syntax", f"+{cmd_name} ..."), inline=False)
-        embed.add_field(name="Exemple", value=info.get("example", ""), inline=False)
-        embed.add_field(name="Conseils / Tips", value=info.get("tips", "—"), inline=False)
+        embed.add_field(name="Exemple", value=f"`{details['example']}`", inline=False)
+        embed.add_field(name="Conseil", value=details['tip'], inline=False)
+        embed.add_field(name="Raccourci", value=details['shortcut'], inline=False)
+        embed.add_field(name="Notes", value=details['notes'], inline=False)
 
-        # ---------------- Vue avec bouton retour + copier ----------------
-        view = discord.ui.View()
-        # Bouton retour
-        btn_back = discord.ui.Button(label="🔙 Retour", style=discord.ButtonStyle.gray)
-        async def back_callback(interaction2):
-            await interaction2.response.edit_message(embed=self.parent_view.category_embed, view=self.parent_view)
-        btn_back.callback = back_callback
-        view.add_item(btn_back)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        # Bouton copier la commande
-        btn_copy = discord.ui.Button(label="📋 Copier l'exemple", style=discord.ButtonStyle.green)
-        async def copy_callback(interaction2):
-            await interaction2.response.send_message(f"`{info.get('example', cmd_name)}`", ephemeral=True)
-        btn_copy.callback = copy_callback
-        view.add_item(btn_copy)
-
-        await interaction.response.edit_message(embed=embed, view=view)
-
-# ---------------- Vue catégorie ----------------
-class CategoryView(discord.ui.View):
-    def __init__(self, bot, category, commands_list):
-        super().__init__(timeout=None)
-        self.bot = bot
-        self.category = category
-        self.category_embed = discord.Embed(
-            title=f"📂 {category}",
-            description="Sélectionne une commande pour voir exemple, syntaxe et conseils.",
-            color=CATEGORY_STYLES.get(category, 0x6b00cb)
-        )
-        self.add_item(CommandSelect(commands_list, category, self))
-
-# ---------------- Select catégorie ----------------
+# ---------------- Menu déroulant ----------------
 class HelpSelect(discord.ui.Select):
-    def __init__(self, categories, is_owner, bot):
+    def __init__(self, categories, is_owner: bool):
         options = [discord.SelectOption(label=cat) for cat in categories]
         if is_owner and "Owner" not in [o.label for o in options]:
             options.append(discord.SelectOption(label="Owner"))
         super().__init__(placeholder="Sélectionne une catégorie", min_values=1, max_values=1, options=options)
-        self.bot = bot
-        self.is_owner = is_owner
 
     async def callback(self, interaction: discord.Interaction):
         category = self.values[0]
+        bot = self.view.bot
+        color = CATEGORY_STYLES.get(category, 0x6b00cb)
+        embed = discord.Embed(color=color)
+        embed.set_footer(text="Préfixe : +")
+        view = discord.ui.View(timeout=None)
+
         if category == "Owner" and interaction.user.id != OWNER_ID:
             return await interaction.response.send_message("⛔ Accès refusé.", ephemeral=True)
 
-        commands_list = []
-        for cog_name, cog in self.bot.cogs.items():
+        found = False
+        for cog_name, cog in bot.cogs.items():
             if category.lower() in cog_name.lower() or (category == "Owner" and cog_name.lower() == "creator"):
                 for cmd in cog.get_commands():
                     if not cmd.hidden:
-                        commands_list.append(cmd.name)
+                        embed.add_field(
+                            name=cmd.name,
+                            value=COMMAND_DETAILS.get(cmd.name, {}).get("tip", "Pas de description"),
+                            inline=False
+                        )
+                        view.add_item(CommandDetailButton(cmd.name))
+                        found = True
 
-        if not commands_list:
-            return await interaction.response.send_message("Aucune commande trouvée.", ephemeral=True)
+        if not found:
+            embed.description = "Aucune commande trouvée pour cette catégorie."
 
-        view = CategoryView(self.bot, category, commands_list)
-        await interaction.response.edit_message(embed=view.category_embed, view=view)
+        await interaction.response.edit_message(embed=embed, view=view)
 
-# ---------------- Vue principale ----------------
+# ---------------- Vue interactive ----------------
 class HelpView(discord.ui.View):
     def __init__(self, bot, is_owner: bool):
         super().__init__(timeout=None)
@@ -130,29 +114,33 @@ class HelpView(discord.ui.View):
             "Modération", "Logs", "Giveaway", "Fun",
             "Bienvenue", "Partenariat", "Règlement", "Vérification"
         ]
-        self.add_item(HelpSelect(categories, is_owner, bot))
-        self.main_embed = discord.Embed(
-            title="[ + ] 𝐑𝐨𝐛𝐢𝐧 - Aide Interactive",
-            description="Sélectionne une catégorie pour voir toutes les commandes interactives.\nChaque commande peut être copiée grâce au bouton vert 📋.",
-            color=0x6b00cb
-        )
+        self.add_item(HelpSelect(categories, is_owner))
 
-# ---------------- Cog +help ----------------
-class AideProCopy(commands.Cog):
-    """+help interactif Pro Max avec copier l'exemple"""
+# ---------------- Commande Help ----------------
+class AidePro(commands.Cog):
+    """+help hyper-pro avec mini-embeds détaillés"""
 
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name="help")
     async def help_command(self, ctx):
-        view = HelpView(self.bot, ctx.author.id == OWNER_ID)
+        embed = discord.Embed(
+            title="[ + ] 𝐑𝐨𝐛𝐢𝐧 - Aide Hyper-Pro",
+            description=(
+                "Toutes mes commandes avec **exemples dynamiques**, **tips**, **mini-embeds détaillés**.\n"
+                "Navigue par catégorie avec le menu ci-dessous.\n\n"
+                "Exemples : `<ID>` = 123456789012345678, `<#salon>` = #general, `<@rôle>` = @Membre.\n"
+                "**Préfixe : `+`**"
+            ),
+            color=0x6b00cb
+        )
         try:
-            await ctx.author.send(embed=view.main_embed, view=view)
-            await ctx.reply("📬 Aide envoyée en message privé.", mention_author=False)
+            await ctx.author.send(embed=embed, view=HelpView(self.bot, ctx.author.id == OWNER_ID))
+            await ctx.reply("📬 Aide envoyée en MP.", mention_author=False)
         except discord.Forbidden:
             await ctx.reply("❌ Impossible de t’envoyer un MP.", mention_author=False)
 
 # ---------------- Setup ----------------
 async def setup(bot):
-    await bot.add_cog(AideProCopy(bot))
+    await bot.add_cog(AidePro(bot))
