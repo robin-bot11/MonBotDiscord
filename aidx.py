@@ -1,115 +1,102 @@
 # help.py
 import discord
 from discord.ext import commands
+from discord.ui import View, Button, Select
 
-EMBED_COLOR = 0x6b00cb
+COLOR = 0x6b00cb
+OWNER_COGS = ["Creator"]
 
-# 🔥 MAPPING COG → CATÉGORIE AFFICHÉE
+# ---------------- CATEGORIES ----------------
 COG_CATEGORIES = {
     "Moderation": "Modération",
-    "Logs": "Logs",
-    "Giveaway": "Giveaway",
     "Fun": "Fun",
-    "Welcome": "Bienvenue",
-    "Partenariat": "Partenariat",
-    "Policy": "Règlement",
-    "Verification": "Vérification",
-    "Owner": "Owner",
-    "Snipe": "Snipe"
+    "WelcomeVerification": "Bienvenue / Vérification",
+    "Logx": "Logs",
+    "Creator": "Owner"
 }
 
-# ------------------ VIEW MENU ------------------
-class CategorySelect(discord.ui.Select):
+# ----------------- SELECT -----------------
+class HelpSelect(Select):
     def __init__(self, bot):
-        self.bot = bot
         options = [
-            discord.SelectOption(
-                label=label,
-                description=f"Voir les commandes de {label}",
-                value=name
-            )
-            for name, label in COG_CATEGORIES.items()
+            discord.SelectOption(label=display_name, value=cog_name)
+            for cog_name, display_name in COG_CATEGORIES.items()
         ]
-        super().__init__(placeholder="Sélectionnez une catégorie...", min_values=1, max_values=1, options=options)
+        super().__init__(placeholder="Sélectionnez une catégorie", min_values=1, max_values=1, options=options)
+        self.bot = bot
 
     async def callback(self, interaction: discord.Interaction):
         cog_name = self.values[0]
+        cog = self.bot.get_cog(cog_name)
 
-        # Cherche le cog exact
-        cog = None
-        for c in self.bot.cogs.values():
-            if c.qualified_name.lower() == cog_name.lower():
-                cog = c
-                break
-
-        embed = discord.Embed(
-            title=COG_CATEGORIES.get(cog_name, cog_name),
-            color=EMBED_COLOR
-        )
+        embed = discord.Embed(title=f"📂 {COG_CATEGORIES[cog_name]}", color=COLOR)
 
         if not cog:
             embed.description = "Aucune commande trouvée pour cette catégorie."
         else:
             cmds = cog.get_commands()
-            if not cmds:
-                embed.description = "Aucune commande trouvée pour cette catégorie."
-            else:
-                for cmd in cmds:
-                    desc = cmd.help or "Pas de description disponible"
-                    embed.add_field(name=f"+{cmd.name}", value=desc, inline=False)
+            desc = ""
+            for cmd in cmds:
+                if cmd.hidden:
+                    continue
+                cmd_desc = cmd.help or "Pas de description"
+                if cog_name in OWNER_COGS:
+                    cmd_desc += " — **Protégée / Owner**"
+                desc += f"+{cmd.name} — {cmd_desc}\n"
+            embed.description = desc or "Aucune commande trouvée pour cette catégorie."
 
-        # Bouton pour revenir à l'accueil
-        view = BackView(self.bot)
+        # Bouton retour
+        view = View(timeout=None)
+        view.add_item(Button(label="⬅️ Retour", style=discord.ButtonStyle.gray, custom_id="help_home"))
+        view.add_item(self)  # garder le menu déroulant
         await interaction.response.edit_message(embed=embed, view=view)
 
-
-class CategoryView(discord.ui.View):
-    def __init__(self, bot):
-        super().__init__(timeout=None)  # Pas de limite de temps
-        self.bot = bot
-        self.add_item(CategorySelect(bot))
-
-
-class BackView(discord.ui.View):
+# ----------------- VIEW -----------------
+class HelpView(View):
     def __init__(self, bot):
         super().__init__(timeout=None)
+        self.add_item(HelpSelect(bot))
+
+# ----------------- BUTTON RETOUR -----------------
+class HelpHomeButton(Button):
+    def __init__(self, bot):
+        super().__init__(label="⬅️ Retour", style=discord.ButtonStyle.gray, custom_id="help_home")
         self.bot = bot
 
-    @discord.ui.button(label="Retour", style=discord.ButtonStyle.primary)
-    async def back(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def callback(self, interaction: discord.Interaction):
         embed = discord.Embed(
-            title="Menu d'aide",
+            title="📖 Menu d'aide",
             description=(
-                "Tu as fait +help ?\n"
+                "Tu as fait +help ?\n\n"
                 "Bienvenue sur le menu d’aide du bot !\n"
-                "Sélectionne une catégorie dans le menu ci-dessous pour voir les commandes disponibles.\n\n"
-                "Certaines commandes sont protégées et réservées au propriétaire."
+                "Sélectionne une catégorie dans le menu ci-dessous pour voir les commandes disponibles."
             ),
-            color=EMBED_COLOR
+            color=COLOR
         )
-        await interaction.response.edit_message(embed=embed, view=CategoryView(self.bot))
+        embed.set_footer(text="Certaines commandes sont protégées et réservées au propriétaire.")
+        await interaction.response.edit_message(embed=embed, view=HelpView(self.bot))
 
-
-# ------------------ COG ------------------
+# ----------------- COG -----------------
 class Help(commands.Cog):
+    """Menu d'aide interactif"""
+
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name="help")
-    async def help_command(self, ctx):
+    async def show_help(self, ctx):
         embed = discord.Embed(
-            title="Menu d'aide",
+            title="📖 Menu d'aide",
             description=(
-                "Tu as fait +help ?\n"
+                "Tu as fait +help ?\n\n"
                 "Bienvenue sur le menu d’aide du bot !\n"
-                "Sélectionne une catégorie dans le menu ci-dessous pour voir les commandes disponibles.\n\n"
-                "Certaines commandes sont protégées et réservées au propriétaire."
+                "Sélectionne une catégorie dans le menu ci-dessous pour voir les commandes disponibles."
             ),
-            color=EMBED_COLOR
+            color=COLOR
         )
-        await ctx.send(embed=embed, view=CategoryView(self.bot))
+        embed.set_footer(text="Certaines commandes sont protégées et réservées au propriétaire.")
+        await ctx.send(embed=embed, view=HelpView(self.bot))
 
-
-# ------------------ SETUP ------------------
+# ----------------- SETUP -----------------
 async def setup(bot):
     await bot.add_cog(Help(bot))
