@@ -15,7 +15,7 @@ class HelpSelect(discord.ui.Select):
             discord.SelectOption(label="Bienvenue"),
             discord.SelectOption(label="Partenariat"),
             discord.SelectOption(label="Règlement"),
-            discord.SelectOption(label="Vérification")
+            discord.SelectOption(label="Vérification")  # publique
         ]
         if is_owner:
             options.append(discord.SelectOption(label="Owner"))
@@ -134,13 +134,11 @@ class HelpSelect(discord.ui.Select):
 
         await interaction.response.edit_message(embed=embed, view=self.view)
 
-
 # ---------------- Vue pour le menu (permanente) ----------------
 class HelpView(discord.ui.View):
     def __init__(self, is_owner: bool):
-        super().__init__(timeout=None)  # Permanent
+        super().__init__(timeout=None)
         self.add_item(HelpSelect(is_owner))
-
 
 # ---------------- Commande Help ----------------
 class Aide(commands.Cog):
@@ -156,19 +154,4 @@ class Aide(commands.Cog):
                 "Tu es dans **la liste de mes commandes**, je vais te guider à travers toutes mes fonctionnalités.\n\n"
                 "Tout est organisé par catégorie pour que tu puisses naviguer facilement.\n\n"
                 "Certaines commandes nécessitent des autorisations spécifiques.\n"
-                "Elles sont protégées automatiquement afin d’éviter toute utilisation non autorisée.\n\n"
-                "**Préfixe : `+`**"
-            ),
-            color=COLOR
-        )
-
-        try:
-            await ctx.author.send(embed=embed, view=HelpView(ctx.author.id == OWNER_ID))
-            await ctx.reply("📬 Aide envoyée en message privé.", mention_author=False)
-        except discord.Forbidden:
-            await ctx.reply("❌ Impossible de t’envoyer un MP.")
-
-
-# ---------------- Setup ----------------
-async def setup(bot):
-    await bot.add_cog(Aide(bot))
+                "Elles sont
