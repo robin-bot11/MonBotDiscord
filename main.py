@@ -4,7 +4,7 @@ import logging
 import asyncio
 
 # ---------------- CONFIG ----------------
-TOKEN = "TON_TOKEN_ICI"
+JETON_DISCORD = "TON_TOKEN_ICI"
 PREFIX = "+"
 intents = discord.Intents.all()
 
@@ -14,21 +14,20 @@ bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
 logging.basicConfig(level=logging.INFO)
 
 # ---------------- COGS ----------------
-# Noms valides pour Railway (sans accents)
 cogs = [
-    "fun",
-    "giveaway",
+    "funx",
+    "givax",
     "aide",
     "verrouiller",
-    "charlie3",   # journaux.py
+    "charlie3",     # journaux
     "moderation",
-    "delta4",     # propriétaire.py
+    "delta4",       # propriétaire
     "message_channel",
     "politique",
     "snipe",
     "partenariat",
-    "alpha1",     # vérification.py
-    "bravo2"      # bienvenue.py
+    "logx",
+    "joinbot"       # vérification + bienvenue fusionné
 ]
 
 # ---------------- ÉVÉNEMENTS ----------------
@@ -57,7 +56,7 @@ async def main():
     async with bot:
         await load_cogs()
         try:
-            await bot.start(TOKEN)
+            await bot.start(JETON_DISCORD)
         except discord.LoginFailure:
             logging.critical("❌ Jeton Discord invalide ou manquant !")
 
