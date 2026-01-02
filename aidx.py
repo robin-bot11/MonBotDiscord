@@ -1,164 +1,135 @@
 from discord.ext import commands
 import discord
 
-COLOR = 0x6b00cb
 OWNER_ID = 1383790178522370058
+
+# ---------------- Couleurs par catégorie ----------------
+CATEGORY_STYLES = {
+    "Modération": 0xE74C3C,      # Rouge vif
+    "Logs": 0xF1C40F,            # Jaune
+    "Giveaway": 0x1ABC9C,        # Turquoise
+    "Fun": 0x9B59B6,             # Violet
+    "Bienvenue": 0x3498DB,       # Bleu
+    "Partenariat": 0xE67E22,     # Orange
+    "Règlement": 0x95A5A6,       # Gris
+    "Vérification": 0x2ECC71,    # Vert
+    "Owner": 0x6b00cb            # Violet foncé
+}
+
+# ---------------- Templates d'exemples pour les commandes ----------------
+EXAMPLES = {
+    "kick": "+kick 123456789012345678 Spam",
+    "ban": "+ban 123456789012345678 Raid",
+    "uban": "+uban 123456789012345678",
+    "mute": "+mute 123456789012345678 Trop de spam",
+    "unmute": "+unmute 123456789012345678",
+    "warn": "+warn 123456789012345678 Mauvais comportement",
+    "unwarn": "+unwarn 123456789012345678 0",
+    "warns": "+warns 123456789012345678",
+    "resetwarns": "+resetwarns 123456789012345678",
+    "purge": "+purge 10",
+    "purgeall": "+purgeall",
+    "timeout": "+timeout 123456789012345678 1h",
+    "say": "+say Bonjour tout le monde !",
+    "sayembed": "+sayembed Message en embed",
+    "createchannel": "+createchannel salon-text text",
+    "deletechannel": "+deletechannel #general",
+    "setlog": "+setlog message #logs",
+    "gyveaway": "+gyveaway 1h Nitro",
+    "gyrole": "+gyrole @Organisateur",
+    "gyend": "+gyend 987654321098765432",
+    "gyrestart": "+gyrestart 987654321098765432",
+    "setwelcome": "+setwelcome #welcome Bienvenue {user} !",
+    "setwelcomeembed": "+setwelcomeembed #welcome Titre Description",
+    "togglewelcome": "+togglewelcome",
+    "setpartnerrole": "+setpartnerrole @Partner",
+    "setpartnersalon": "+setpartnersalon #partenariat",
+    "reglement": "+reglement",
+    "showreglement": "+showreglement",
+    "setupverify": "+setupverify",
+    "ping": "+ping",
+    "dm": "+dm 123456789012345678 Salut !",
+    "backupconfig": "+backupconfig",
+    "restoreconfig": "+restoreconfig",
+    "shutdownbot": "+shutdownbot",
+    "restartbot": "+restartbot",
+    "poweron": "+poweron",
+    "eval": "+eval print('Hello World')",
+    "servers": "+servers 1",
+    "invite": "+invite 123456789012345678",
+    "listbots": "+listbots",
+    "checkrole": "+checkrole 123456789012345678",
+    "checkchannel": "+checkchannel 123456789012345678",
+    "checkmember": "+checkmember 123456789012345678",
+    "papa": "+papa"
+}
 
 # ---------------- Menu déroulant ----------------
 class HelpSelect(discord.ui.Select):
-    def __init__(self, is_owner: bool):
-        options = [
-            discord.SelectOption(label="Modération"),
-            discord.SelectOption(label="Logs"),
-            discord.SelectOption(label="Giveaway"),
-            discord.SelectOption(label="Fun"),
-            discord.SelectOption(label="Bienvenue"),
-            discord.SelectOption(label="Partenariat"),
-            discord.SelectOption(label="Règlement"),
-            discord.SelectOption(label="Vérification")
-        ]
-        if is_owner:
+    def __init__(self, categories, is_owner: bool):
+        options = [discord.SelectOption(label=cat) for cat in categories]
+        if is_owner and "Owner" not in [o.label for o in options]:
             options.append(discord.SelectOption(label="Owner"))
 
-        super().__init__(
-            placeholder="Sélectionne une catégorie",
-            min_values=1,
-            max_values=1,
-            options=options
-        )
+        super().__init__(placeholder="Sélectionne une catégorie", min_values=1, max_values=1, options=options)
 
     async def callback(self, interaction: discord.Interaction):
-        cat = self.values[0]
-        embed = discord.Embed(color=COLOR)
+        category = self.values[0]
+        bot = self.view.bot
+        color = CATEGORY_STYLES.get(category, 0x6b00cb)
+        embed = discord.Embed(color=color)
+        embed.set_footer(text="Préfixe : +")
 
-        # ---------------- Modération ----------------
-        if cat == "Modération":
-            embed.title = "Modération"
-            embed.description = (
-                "**+kick `<ID> <raison>`**\n↳ Expulse temporairement un membre\n\n"
-                "**+ban `<ID> <raison>`**\n↳ Banni définitivement un membre\n\n"
-                "**+uban `<ID>`**\n↳ Retire un ban\n\n"
-                "**+mute `<ID> <raison>`**\n↳ Rend un membre muet\n\n"
-                "**+unmute `<ID>`**\n↳ Retire le mute\n\n"
-                "**+warn `<ID> <raison>`**\n↳ Donne un avertissement\n\n"
-                "**+unwarn `<ID> <num>`**\n↳ Supprime un avertissement spécifique\n\n"
-                "**+warns `<ID>`**\n↳ Affiche tous les avertissements\n\n"
-                "**+resetwarns `<ID>`**\n↳ Supprime tous les warns d'un membre\n\n"
-                "**+purge `<nombre>`**\n↳ Supprime un nombre précis de messages\n\n"
-                "**+purgeall**\n↳ Supprime tous les messages du salon\n\n"
-                "**+timeout `<ID> <durée>`**\n↳ Timeout temporaire d’un membre (max 28 jours)"
-            )
+        if category == "Owner" and interaction.user.id != OWNER_ID:
+            return await interaction.response.send_message("⛔ Accès refusé.", ephemeral=True)
 
-        # ---------------- Logs ----------------
-        elif cat == "Logs":
-            embed.title = "Logs"
-            embed.description = (
-                "**+setlog message `<#salon>`**\n↳ Logs messages\n\n"
-                "**+setlog mod `<#salon>`**\n↳ Logs modération\n\n"
-                "**+setlog channel `<#salon>`**\n↳ Logs salons\n\n"
-                "**+setlog voice `<#salon>`**\n↳ Logs vocaux\n\n"
-                "**+setlog member `<#salon>`**\n↳ Logs membres\n\n"
-                "**+setlog role `<#salon>`**\n↳ Logs rôles"
-            )
+        desc = ""
+        for cog_name, cog in bot.cogs.items():
+            if category.lower() in cog_name.lower() or (category == "Owner" and cog_name.lower() == "owner"):
+                for cmd in cog.get_commands():
+                    if not cmd.hidden:
+                        example = EXAMPLES.get(cmd.name, f"+{cmd.name} {cmd.signature}")
+                        desc += f"**{example}**\n↳ {cmd.help or 'Pas de description'}\n\n"
 
-        # ---------------- Giveaway ----------------
-        elif cat == "Giveaway":
-            embed.title = "Giveaway"
-            embed.description = (
-                "**+gyveaway `<durée> <récompense>`**\n↳ Lance un giveaway\n\n"
-                "**+gyrole `<@rôle>`**\n↳ Définit les rôles autorisés\n\n"
-                "**+gyend `<ID>`**\n↳ Termine un giveaway\n\n"
-                "**+gyrestart `<ID>`**\n↳ Relance un giveaway terminé"
-            )
+        if not desc:
+            desc = "Aucune commande trouvée pour cette catégorie."
 
-        # ---------------- Fun ----------------
-        elif cat == "Fun":
-            embed.title = "Fun"
-            embed.description = "**+papa**\n↳ Réponse amusante ou blague fun"
-
-        # ---------------- Bienvenue ----------------
-        elif cat == "Bienvenue":
-            embed.title = "Bienvenue"
-            embed.description = (
-                "**+setwelcome `<#channel> <message>`**\n↳ Configure un message de bienvenue simple\n\n"
-                "**+setwelcomeembed `<#channel> <title> <description> [thumbnail_url] [image_url]`**\n↳ Configure un embed de bienvenue\n\n"
-                "**+togglewelcome**\n↳ Active ou désactive le welcome sans supprimer la configuration"
-            )
-
-        # ---------------- Partenariat ----------------
-        elif cat == "Partenariat":
-            embed.title = "Partenariat"
-            embed.description = (
-                "**+setpartnerrole `<@rôle>`**\n↳ Définit le rôle à ping\n\n"
-                "**+setpartnersalon `<#channel>`**\n↳ Définit le salon partenariat"
-            )
-
-        # ---------------- Règlement ----------------
-        elif cat == "Règlement":
-            embed.title = "Règlement"
-            embed.description = (
-                "**+reglement**\n↳ Lance l’assistant interactif pour configurer le règlement\n\n"
-                "**+showreglement**\n↳ Affiche le règlement avec le bouton d’acceptation"
-            )
-
-        # ---------------- Vérification ----------------
-        elif cat == "Vérification":
-            embed.title = "Vérification"
-            embed.description = (
-                "**+setupverify**\n↳ Configure la vérification emoji avec rôle isolation et 3 essais max"
-            )
-
-        # ---------------- Owner ----------------
-        elif cat == "Owner":
-            if interaction.user.id != OWNER_ID:
-                return await interaction.response.send_message("⛔ Accès refusé.", ephemeral=True)
-            embed.title = "Owner"
-            embed.description = (
-                "**+ping**\n↳ Vérifie la latence\n\n"
-                "**+dm `<ID> <message>`**\n↳ Envoie un message privé\n\n"
-                "**+backupconfig**\n↳ Sauvegarde la configuration\n\n"
-                "**+restoreconfig**\n↳ Restaure la configuration\n\n"
-                "**+shutdownbot**\n↳ Éteint le bot\n\n"
-                "**+restartbot**\n↳ Redémarre le bot\n\n"
-                "**+poweron**\n↳ Relance les services internes\n\n"
-                "**+eval `<code>`**\n↳ Évalue du code Python\n\n"
-                "**+servers `<page>`**\n↳ Liste les serveurs avec pagination\n\n"
-                "**+invite `<ID serveur>`**\n↳ Envoie une invitation pour un serveur\n\n"
-                "**+listbots**\n↳ Liste tous les bots sur le serveur\n\n"
-                "**+checkrole `<ID>`**\n↳ Affiche les permissions d’un rôle\n\n"
-                "**+checkchannel `<ID>`**\n↳ Affiche les infos d’un salon\n\n"
-                "**+checkmember `<ID>`**\n↳ Affiche les rôles et permissions d’un membre\n\n"
-                "**+resetwarns `<ID>`**\n↳ Supprime tous les warns d’un membre"
-            )
-
+        embed.title = f"**{category.upper()}**"
+        embed.description = desc
         await interaction.response.edit_message(embed=embed, view=self.view)
 
-# ---------------- Vue pour le menu (permanente) ----------------
+# ---------------- Vue interactive ----------------
 class HelpView(discord.ui.View):
-    def __init__(self, is_owner: bool):
+    def __init__(self, bot, is_owner: bool):
         super().__init__(timeout=None)
-        self.add_item(HelpSelect(is_owner))
+        self.bot = bot
+        categories = [
+            "Modération", "Logs", "Giveaway", "Fun",
+            "Bienvenue", "Partenariat", "Règlement", "Vérification"
+        ]
+        self.add_item(HelpSelect(categories, is_owner))
 
 # ---------------- Commande Help ----------------
 class Aide(commands.Cog):
+    """Commande +help ultime stylée"""
+
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name="help")
     async def help_command(self, ctx):
         embed = discord.Embed(
-            title="[ + ] 𝐑𝐨𝐛𝐢𝐧",
+            title="[ + ] 𝐑𝐨𝐛𝐢𝐧 - Aide Premium",
             description=(
-                "Tu as fait `+help` ?\n\n"
-                "Tu es dans **la liste de mes commandes**, je vais te guider à travers toutes mes fonctionnalités.\n\n"
-                "Tout est organisé par catégorie pour que tu puisses naviguer facilement.\n\n"
-                "Certaines commandes nécessitent des autorisations spécifiques. Elles sont protégées automatiquement afin d’éviter toute utilisation non autorisée.\n\n"
+                "Voici toutes mes commandes avec **exemples dynamiques** et couleurs par catégorie !\n"
+                "Navigue par catégorie avec le menu ci-dessous.\n\n"
+                "Exemples : `<ID>` = 123456789012345678, `<#salon>` = #general, `<@rôle>` = @Membre.\n\n"
                 "**Préfixe : `+`**"
             ),
-            color=COLOR
+            color=0x6b00cb
         )
         try:
-            await ctx.author.send(embed=embed, view=HelpView(ctx.author.id == OWNER_ID))
+            await ctx.author.send(embed=embed, view=HelpView(self.bot, ctx.author.id == OWNER_ID))
             await ctx.reply("📬 Aide envoyée en message privé.", mention_author=False)
         except discord.Forbidden:
             await ctx.reply("❌ Impossible de t’envoyer un MP.")
