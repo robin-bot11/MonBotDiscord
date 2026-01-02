@@ -37,14 +37,14 @@ class HelpSelect(discord.ui.Select):
                 "**+kick `<ID> <raison>`**\n↳ Expulse temporairement un membre\n\n"
                 "**+ban `<ID> <raison>`**\n↳ Banni définitivement un membre\n\n"
                 "**+uban `<ID>`**\n↳ Retire un ban\n\n"
-                "**+mute `<ID> <raison>`**\n↳ Rend un membre muet\n\n"
+                "**+mute `<ID> <raison>`**\n↳ Rend un membre muet (il ne pourra plus envoyer de messages)\n\n"
                 "**+unmute `<ID>`**\n↳ Retire le mute\n\n"
                 "**+warn `<ID> <raison>`**\n↳ Donne un avertissement\n\n"
-                "**+unwarn `<ID> <num>`**\n↳ Supprime un avertissement\n\n"
-                "**+warns `<ID>`**\n↳ Affiche les avertissements\n\n"
+                "**+unwarn `<ID> <num>`**\n↳ Supprime un avertissement spécifique\n\n"
+                "**+warns `<ID>`**\n↳ Affiche tous les avertissements\n\n"
                 "**+purge `<nombre>`**\n↳ Supprime un nombre précis de messages\n\n"
                 "**+purgeall**\n↳ Supprime tous les messages du salon\n\n"
-                "**+timeout `<ID> <durée>`**\n↳ Timeout d’un membre"
+                "**+timeout `<ID> <durée>`**\n↳ Timeout temporaire d’un membre (max 28 jours)"
             )
 
         # ---------------- Logs ----------------
