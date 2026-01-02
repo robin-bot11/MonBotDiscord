@@ -8,9 +8,8 @@ OWNER_ID = 1383790178522370058
 
 # -------------------- Menu Select --------------------
 class HelpSelect(Select):
-    def __init__(self, user_id, bot):
+    def __init__(self, user_id):
         self.user_id = user_id
-        self.bot = bot
 
         options = [
             discord.SelectOption(label="Bienvenue / Vérification", description="Commandes de bienvenue et vérification"),
@@ -20,7 +19,13 @@ class HelpSelect(Select):
             discord.SelectOption(label="Snipe", description="Commandes pour snipe messages supprimés"),
         ]
 
-        super().__init__(placeholder="Sélectionnez une catégorie", min_values=1, max_values=1, options=options, custom_id=f"help_select_{user_id}")
+        super().__init__(
+            placeholder="Sélectionnez une catégorie",
+            min_values=1,
+            max_values=1,
+            options=options,
+            custom_id=f"help_select_{user_id}"
+        )
 
     async def callback(self, interaction: discord.Interaction):
         if interaction.user.id != self.user_id:
@@ -69,21 +74,24 @@ class HelpSelect(Select):
                 "+esnipe — Affiche le dernier message édité"
             )
 
-        # Bouton retour
-        view = View(timeout=None)
-        view.add_item(Button(label="Retour", style=discord.ButtonStyle.secondary, custom_id=f"help_back_{self.user_id}"))
+        view = HelpView(self.user_id)
         await interaction.response.edit_message(embed=embed, view=view)
 
 
-# -------------------- Cog Help --------------------
-class Help(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
+# -------------------- Vue complète --------------------
+class HelpView(View):
+    def __init__(self, user_id):
+        super().__init__(timeout=None)
+        self.user_id = user_id
+        self.add_item(HelpSelect(user_id))
+        self.add_item(Button(label="Retour", style=discord.ButtonStyle.secondary, custom_id=f"help_back_{user_id}"))
 
-    @commands.command(name="help")
-    async def help_command(self, ctx):
-        owner_hidden = ctx.author.id != OWNER_ID
+    @discord.ui.button(label="Retour", style=discord.ButtonStyle.secondary)
+    async def back_button(self, button: Button, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("❌ Ce bouton n'est pas pour vous.", ephemeral=True)
 
+        # Message d'accueil
         embed = discord.Embed(
             title="📖 Menu d'aide",
             description=(
@@ -95,10 +103,31 @@ class Help(commands.Cog):
             color=COLOR
         )
 
-        view = View(timeout=None)
-        view.add_item(HelpSelect(ctx.author.id, self.bot))
+        # Affiche le menu déroulant à nouveau
+        view = HelpView(self.user_id)
+        await interaction.response.edit_message(embed=embed, view=view)
 
+
+# -------------------- Cog Help --------------------
+class Help(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    @commands.command(name="help")
+    async def help_command(self, ctx):
+        embed = discord.Embed(
+            title="📖 Menu d'aide",
+            description=(
+                "Tu as fait +help ?\n\n"
+                "Bienvenue sur le menu d’aide du bot !\n"
+                "Sélectionne une catégorie dans le menu ci-dessous pour voir les commandes disponibles.\n\n"
+                "Certaines commandes sont protégées et réservées au propriétaire."
+            ),
+            color=COLOR
+        )
+        view = HelpView(ctx.author.id)
         await ctx.send(embed=embed, view=view)
+
 
 # -------------------- Setup --------------------
 async def setup(bot):
