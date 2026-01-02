@@ -2,12 +2,14 @@ import discord
 from discord.ext import commands
 from discord.ui import View, Button, Select
 import random
-from database import Database
+from base_donnees import Database  # renommer selon ton fichier
 
 COLOR_DEFAULT = 0x6b00cb
 MAX_TRIES = 3
-EMOJIS = ["🩵","💚","🩷","🧡","💜"]
 
+EMOJIS = ["🩵", "💚", "🩷", "🧡", "💜"]
+
+# ---------------- Sélection d'emoji ----------------
 class VerificationSelect(Select):
     def __init__(self, correct_emoji, member, role_to_give, role_to_remove, db, guild_id):
         self.correct_emoji = correct_emoji
@@ -16,6 +18,7 @@ class VerificationSelect(Select):
         self.role_to_remove = role_to_remove
         self.db = db
         self.guild_id = guild_id
+
         options = [discord.SelectOption(label=e) for e in EMOJIS]
         super().__init__(placeholder="Sélectionnez l'emoji correct", min_values=1, max_values=1, options=options)
 
@@ -27,19 +30,16 @@ class VerificationSelect(Select):
             try:
                 await self.member.add_roles(self.role_to_give, reason="Vérification réussie")
                 if self.role_to_remove:
-                    role_obj = interaction.guild.get_role(self.role_to_remove) if isinstance(self.role_to_remove,int) else self.role_to_remove
-                    if role_obj:
-                        await self.member.remove_roles(role_obj, reason="Vérification réussie")
+                    await self.member.remove_roles(self.role_to_remove, reason="Vérification réussie")
                 await interaction.response.edit_message(content=f"✅ {self.member.mention}, vous êtes vérifié !", view=None)
             except discord.Forbidden:
                 await interaction.response.send_message("❌ Je n'ai pas les permissions pour gérer les rôles.", ephemeral=True)
-            # reset tries
-            guild_data.setdefault("tries", {})[str(self.member.id)] = 0
         else:
             member_tries += 1
             guild_data.setdefault("tries", {})[str(self.member.id)] = member_tries
             self.db.data["verification"][str(self.guild_id)] = guild_data
             self.db.save()
+
             if member_tries >= MAX_TRIES:
                 try:
                     await self.member.kick(reason="Échec de la vérification (3 essais)")
@@ -49,6 +49,7 @@ class VerificationSelect(Select):
             else:
                 await interaction.response.send_message(f"❌ Mauvais emoji, il vous reste {MAX_TRIES - member_tries} essais.", ephemeral=True)
 
+# ---------------- Vue du bouton ----------------
 class VerificationView(View):
     def __init__(self, correct_emoji, member, role_to_give, role_to_remove, db, guild_id, button_text):
         super().__init__(timeout=None)
@@ -71,68 +72,70 @@ class VerificationView(View):
         ))
         await interaction.response.edit_message(content="Veuillez sélectionner l'emoji correct :", view=view)
 
+# ---------------- Cog principal ----------------
 class Verification(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.db = Database()
 
-    # ---------------- Commande setup interactive ----------------
     @commands.command()
     @commands.has_permissions(administrator=True)
     async def setupverify(self, ctx):
+        """Configuration interactive de la vérification"""
         guild_id = str(ctx.guild.id)
         self.db.data.setdefault("verification", {})
         self.db.data["verification"].setdefault(guild_id, {})
 
-        # 1️⃣ Titre
+        # Titre
         await ctx.send("📌 Entrez le **titre** de l'embed de vérification :")
         msg = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author and m.channel == ctx.channel)
         title = msg.content
 
-        # 2️⃣ Description
+        # Description
         await ctx.send("📌 Entrez la **description** de l'embed :")
         msg = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author and m.channel == ctx.channel)
         description = msg.content
 
-        # 3️⃣ Texte du bouton
+        # Texte du bouton
         await ctx.send("📌 Entrez le **texte du bouton** :")
         msg = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author and m.channel == ctx.channel)
         button_text = msg.content
 
-        # 4️⃣ Rôle à donner après vérification
+        # Rôle à donner après vérification
         await ctx.send("📌 Mentionnez le **rôle à donner** après vérification :")
         msg = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author and m.channel == ctx.channel)
         role_to_give = ctx.guild.get_role(int(msg.content.strip("<@&>")))
 
-        # 5️⃣ Rôle d'isolation automatique
-        isolation_role_id = self.db.data["verification"][guild_id].get("isolation_role")
+        # Rôle d'isolation automatique
+        guild_data = self.db.data["verification"][guild_id]
+        isolation_role_id = guild_data.get("isolation_role")
         if not isolation_role_id:
             try:
-                isolation_role_obj = await ctx.guild.create_role(name="Non vérifié", reason="Rôle créé automatiquement pour vérification")
-                isolation_role_id = isolation_role_obj.id
-                self.db.data["verification"][guild_id]["isolation_role"] = isolation_role_id
-                # Bloquer l'accès à tous les channels existants
+                isolation_role = await ctx.guild.create_role(name="Non vérifié", reason="Rôle d'isolation")
+                self.db.data["verification"][guild_id]["isolation_role"] = isolation_role.id
+                # Restreindre tous les salons existants
                 for channel in ctx.guild.text_channels:
-                    await channel.set_permissions(isolation_role_obj, read_messages=False)
+                    await channel.set_permissions(isolation_role, read_messages=False)
             except discord.Forbidden:
                 await ctx.send("❌ Je n'ai pas les permissions pour créer le rôle d'isolation.")
+        else:
+            isolation_role = ctx.guild.get_role(isolation_role_id)
 
         self.db.data["verification"][guild_id].update({
             "title": title,
             "description": description,
             "button_text": button_text,
-            "role_to_give": role_to_give.id,
-            "isolation_role": isolation_role_id
+            "role_to_give": role_to_give.id
         })
         self.db.save()
 
-        # Envoi du message interactif de vérification
+        # Envoi du message de vérification
         embed = discord.Embed(title=title, description=description, color=COLOR_DEFAULT)
         view = VerificationView(
             correct_emoji=random.choice(EMOJIS),
             member=None,
             role_to_give=role_to_give,
-            role_to_remove=isolation_role_id,
+            role_to_remove=isolation_role,
             db=self.db,
             guild_id=ctx.guild.id,
             button_text=button_text
@@ -142,20 +145,6 @@ class Verification(commands.Cog):
         self.db.data["verification"][guild_id]["last_emoji"] = view.correct_emoji
         self.db.save()
         await ctx.send(f"✅ Configuration terminée et message de vérification envoyé dans {ctx.channel.mention}")
-
-    # ---------------- Attribution automatique du rôle d'isolation ----------------
-    @commands.Cog.listener()
-    async def on_member_join(self, member):
-        guild_id = str(member.guild.id)
-        guild_data = self.db.data.get("verification", {}).get(guild_id, {})
-        isolation_role_id = guild_data.get("isolation_role")
-        if isolation_role_id:
-            role_obj = member.guild.get_role(isolation_role_id)
-            if role_obj:
-                try:
-                    await member.add_roles(role_obj, reason="Rôle d'isolation automatique")
-                except discord.Forbidden:
-                    pass
 
 # ---------------- Setup ----------------
 async def setup(bot):
