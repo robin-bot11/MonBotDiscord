@@ -15,7 +15,7 @@ class HelpSelect(discord.ui.Select):
             discord.SelectOption(label="Bienvenue"),
             discord.SelectOption(label="Partenariat"),
             discord.SelectOption(label="Règlement"),
-            discord.SelectOption(label="Vérification")  # publique
+            discord.SelectOption(label="Vérification")
         ]
         if is_owner:
             options.append(discord.SelectOption(label="Owner"))
@@ -106,7 +106,7 @@ class HelpSelect(discord.ui.Select):
             embed.description = (
                 "**+setverifyrole `<@rôle>`**\n↳ Définit le rôle à donner après vérification\n\n"
                 "**+setunverifiedrole `<@rôle>`**\n↳ Définit le rôle à retirer après vérification (optionnel)\n\n"
-                "**+sendverify `<#salon>` `<titre>` <description>`**\n↳ Envoie l'embed interactif de vérification"
+                "**+sendverify `<#salon>` `<titre>` `<description>`**\n↳ Envoie l'embed interactif de vérification"
             )
 
         # ---------------- Owner ----------------
@@ -154,4 +154,17 @@ class Aide(commands.Cog):
                 "Tu es dans **la liste de mes commandes**, je vais te guider à travers toutes mes fonctionnalités.\n\n"
                 "Tout est organisé par catégorie pour que tu puisses naviguer facilement.\n\n"
                 "Certaines commandes nécessitent des autorisations spécifiques.\n"
-                "Elles sont
+                "Elles sont protégées automatiquement afin d’éviter toute utilisation non autorisée.\n\n"
+                "**Préfixe : `+`**"
+            ),
+            color=COLOR
+        )
+        try:
+            await ctx.author.send(embed=embed, view=HelpView(ctx.author.id == OWNER_ID))
+            await ctx.reply("📬 Aide envoyée en message privé.", mention_author=False)
+        except discord.Forbidden:
+            await ctx.reply("❌ Impossible de t’envoyer un MP.")
+
+# ---------------- Setup ----------------
+async def setup(bot):
+    await bot.add_cog(Aide(bot))
