@@ -8,27 +8,27 @@ TOKEN = "TON_TOKEN_ICI"
 PREFIX = "+"
 intents = discord.Intents.all()
 
-# Désactivation de la commande help par défaut
+# Désactivation du help par défaut
 bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
 
 logging.basicConfig(level=logging.INFO)
 
 # ---------------- COGS ----------------
-# Liste de tous les cogs avec noms valides Railway (sans accents)
+# Noms valides pour Railway (sans accents)
 cogs = [
     "fun",
     "giveaway",
     "aide",
     "verrouiller",
-    "charlie3",        # journaux.py renommé
+    "charlie3",   # journaux.py
     "moderation",
-    "delta4",          # propriétaire.py renommé
+    "delta4",     # propriétaire.py
     "message_channel",
     "politique",
     "snipe",
     "partenariat",
-    "alpha1",          # vérification.py renommé
-    "bravo2"           # bienvenue.py renommé
+    "alpha1",     # vérification.py
+    "bravo2"      # bienvenue.py
 ]
 
 # ---------------- ÉVÉNEMENTS ----------------
