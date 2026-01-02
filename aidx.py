@@ -75,15 +75,8 @@ class HelpView(View):
         self.user_id = user_id
         self.owner_id = owner_id
 
-        # Menu déroulant
+        # Menu déroulant uniquement
         self.add_item(HelpSelect(user_id, owner_id))
-
-        # Barre de boutons
-        for cat in ["Bienvenue / Vérification", "Fun", "Modération", "Logs / Snipe"]:
-            self.add_item(CategoryButton(label=cat, user_id=user_id))
-
-        if user_id == owner_id:
-            self.add_item(CategoryButton(label="Owner", user_id=user_id))
 
         # Bouton Retour
         self.add_item(BackButton(user_id))
@@ -103,17 +96,6 @@ class HelpSelect(Select):
         embed = generate_embed(self.values[0])
         await interaction.response.edit_message(embed=embed, view=self.view)
 
-class CategoryButton(Button):
-    def __init__(self, label, user_id):
-        super().__init__(label=label, style=discord.ButtonStyle.primary, custom_id=f"help_btn_{label}")
-        self.user_id = user_id
-
-    async def callback(self, interaction: discord.Interaction):
-        if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("❌ Ce bouton n'est pas pour vous.", ephemeral=True)
-        embed = generate_embed(self.label)
-        await interaction.response.edit_message(embed=embed, view=self.view)
-
 class BackButton(Button):
     def __init__(self, user_id):
         super().__init__(label="Retour", style=discord.ButtonStyle.secondary, custom_id="help_back_button")
@@ -126,7 +108,7 @@ class BackButton(Button):
             title="📖 Menu d'aide",
             description=(
                 "Bienvenue sur le menu d’aide du bot !\n"
-                "Sélectionne une catégorie dans le menu ou la barre de boutons pour voir les commandes.\n"
+                "Sélectionne une catégorie dans le menu déroulant pour voir les commandes.\n"
                 "Certaines commandes sont protégées et réservées au propriétaire."
             ),
             color=COLOR
@@ -135,7 +117,7 @@ class BackButton(Button):
 
 # -------------------- COG --------------------
 class Help(commands.Cog):
-    """Menu d'aide interactif style dashboard"""
+    """Menu d'aide interactif style dashboard simplifié"""
 
     def __init__(self, bot):
         self.bot = bot
@@ -149,7 +131,7 @@ class Help(commands.Cog):
             title="📖 Menu d'aide",
             description=(
                 "Bienvenue sur le menu d’aide du bot !\n"
-                "Sélectionne une catégorie dans le menu ou la barre de boutons pour voir les commandes.\n"
+                "Sélectionne une catégorie dans le menu déroulant pour voir les commandes.\n"
                 "Certaines commandes sont protégées et réservées au propriétaire."
             ),
             color=COLOR
