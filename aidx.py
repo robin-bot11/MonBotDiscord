@@ -1,97 +1,83 @@
 # help.py
-from discord.ext import commands
 import discord
-from discord.ui import View, Button, Select
+from discord.ext import commands
+from discord.ui import View, Select, Button
 
 COLOR = 0x6b00cb
-OWNER_ID = 1383790178522370058
 
-# -------------------- Menu Select --------------------
+# -------------------- COMMANDES PAR CATÉGORIE --------------------
+COMMANDS = {
+    "Bienvenue / Vérification": [
+        {"name": "+setupverify", "desc": "Configurer la vérification avec emoji"},
+        {"name": "+setwelcome", "desc": "Configurer le welcome simple (texte)"},
+        {"name": "+setwelcomeembed", "desc": "Configurer le welcome en embed"},
+        {"name": "+togglewelcome", "desc": "Activer / désactiver le welcome sans supprimer la config"}
+    ],
+    "Fun": [
+        {"name": "+papa", "desc": "Affiche un message fun pour le papa du serveur"}
+    ],
+    "Modération": [
+        {"name": "+kick", "desc": "Expulse un membre du serveur"},
+        {"name": "+ban", "desc": "Bannit un membre du serveur"},
+        {"name": "+unban", "desc": "Débannit un utilisateur via son ID"},
+        {"name": "+mute", "desc": "Mute un membre avec le rôle 'Muted'"},
+        {"name": "+unmute", "desc": "Retire le rôle 'Muted' à un membre"},
+        {"name": "+timeout", "desc": "Met un membre en timeout (minutes)"},
+        {"name": "+giverole", "desc": "Donne un rôle à un membre"},
+        {"name": "+takerole", "desc": "Retire un rôle à un membre"},
+        {"name": "+warn", "desc": "Avertit un membre"},
+        {"name": "+warns", "desc": "Affiche les warns d'un membre"},
+        {"name": "+unwarn", "desc": "Supprime un warn spécifique"},
+        {"name": "+purge", "desc": "Supprime un nombre spécifique de messages"},
+        {"name": "+purgeall", "desc": "Supprime tous les messages du salon"}
+    ],
+    "Logs / Snipe": [
+        {"name": "+snipe", "desc": "Affiche le dernier message supprimé"},
+        {"name": "+editsnipe", "desc": "Affiche le dernier message édité"},
+        {"name": "+logrole", "desc": "Logs de rôle"},
+        {"name": "+logmod", "desc": "Logs modération"},
+        {"name": "+logvoice", "desc": "Logs vocaux"},
+        {"name": "+logchannel", "desc": "Logs de création/suppression/modification de salon"},
+        {"name": "+logmessage", "desc": "Logs messages supprimés/édités"}
+    ]
+}
+
+# -------------------- MENU DÉROULANT --------------------
 class HelpSelect(Select):
     def __init__(self, user_id):
+        options = [discord.SelectOption(label=cat) for cat in COMMANDS.keys()]
+        super().__init__(placeholder="Sélectionnez une catégorie", min_values=1, max_values=1, options=options)
         self.user_id = user_id
-
-        options = [
-            discord.SelectOption(label="Bienvenue / Vérification", description="Commandes de bienvenue et vérification"),
-            discord.SelectOption(label="Fun", description="Commandes amusantes"),
-            discord.SelectOption(label="Modération", description="Commandes pour gérer le serveur"),
-            discord.SelectOption(label="Logs", description="Commandes liées aux logs"),
-            discord.SelectOption(label="Snipe", description="Commandes pour snipe messages supprimés"),
-        ]
-
-        super().__init__(
-            placeholder="Sélectionnez une catégorie",
-            min_values=1,
-            max_values=1,
-            options=options,
-            custom_id=f"help_select_{user_id}"
-        )
 
     async def callback(self, interaction: discord.Interaction):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("❌ Ce menu n'est pas pour vous.", ephemeral=True)
 
-        embed = discord.Embed(title="📂 Menu d'aide", color=COLOR)
+        category = self.values[0]
+        cmds = COMMANDS.get(category, [])
+        if not cmds:
+            description = "Aucune commande trouvée pour cette catégorie."
+        else:
+            description = ""
+            for cmd in cmds:
+                desc = cmd["desc"] if cmd.get("desc") else "Pas de description"
+                description += f"**{cmd['name']}** — {desc}\n"
 
-        if self.values[0] == "Bienvenue / Vérification":
-            embed.description = (
-                "+setupverify — Configurer la vérification avec emoji\n"
-                "+setwelcome — Configurer le welcome simple (texte)\n"
-                "+setwelcomeembed — Configurer le welcome en embed\n"
-                "+togglewelcome — Activer / désactiver le welcome sans supprimer la config"
-            )
-        elif self.values[0] == "Fun":
-            embed.description = (
-                "+papa — Envoie un message hommage au propriétaire du serveur"
-            )
-        elif self.values[0] == "Modération":
-            embed.description = (
-                "+kick <ID> [raison] — Expulse un membre\n"
-                "+ban <ID> [raison] — Bannit un membre\n"
-                "+unban <ID> — Débannit un membre\n"
-                "+mute <ID> [raison] — Mute un membre\n"
-                "+unmute <ID> — Unmute un membre\n"
-                "+timeout <ID> <minutes> — Timeout d'un membre\n"
-                "+giverole <ID> <roleID> — Donne un rôle\n"
-                "+takerole <ID> <roleID> — Retire un rôle\n"
-                "+warn <ID> [raison] — Avertit un membre\n"
-                "+warns <ID> — Liste des warns\n"
-                "+unwarn <ID> <num> — Supprime un warn\n"
-                "+purge <nombre> — Supprime des messages\n"
-                "+purgeall — Supprime tous les messages du salon"
-            )
-        elif self.values[0] == "Logs":
-            embed.description = (
-                "+logchannel — Configurer le salon logs\n"
-                "+logrole — Configurer les logs rôles\n"
-                "+logmod — Configurer les logs modérations\n"
-                "+logvoice — Configurer les logs vocaux\n"
-                "+logmessage — Configurer les logs messages"
-            )
-        elif self.values[0] == "Snipe":
-            embed.description = (
-                "+snipe — Affiche le dernier message supprimé\n"
-                "+esnipe — Affiche le dernier message édité"
-            )
+        embed = discord.Embed(title=f"📂 {category}", description=description, color=COLOR)
+        await interaction.response.edit_message(embed=embed, view=HelpView(self.user_id))
 
-        view = HelpView(self.user_id)
-        await interaction.response.edit_message(embed=embed, view=view)
-
-
-# -------------------- Vue complète --------------------
+# -------------------- VUE --------------------
 class HelpView(View):
     def __init__(self, user_id):
         super().__init__(timeout=None)
         self.user_id = user_id
         self.add_item(HelpSelect(user_id))
-        self.add_item(Button(label="Retour", style=discord.ButtonStyle.secondary, custom_id=f"help_back_{user_id}"))
 
-    @discord.ui.button(label="Retour", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="Retour", style=discord.ButtonStyle.secondary, custom_id="help_back_button")
     async def back_button(self, button: Button, interaction: discord.Interaction):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("❌ Ce bouton n'est pas pour vous.", ephemeral=True)
 
-        # Message d'accueil
         embed = discord.Embed(
             title="📖 Menu d'aide",
             description=(
@@ -103,18 +89,17 @@ class HelpView(View):
             color=COLOR
         )
 
-        # Affiche le menu déroulant à nouveau
-        view = HelpView(self.user_id)
-        await interaction.response.edit_message(embed=embed, view=view)
+        await interaction.response.edit_message(embed=embed, view=HelpView(self.user_id))
 
-
-# -------------------- Cog Help --------------------
+# -------------------- COG --------------------
 class Help(commands.Cog):
+    """Menu d'aide avec sélection de catégorie"""
+
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="help")
-    async def help_command(self, ctx):
+    @commands.command()
+    async def help(self, ctx):
         embed = discord.Embed(
             title="📖 Menu d'aide",
             description=(
@@ -125,10 +110,8 @@ class Help(commands.Cog):
             ),
             color=COLOR
         )
-        view = HelpView(ctx.author.id)
-        await ctx.send(embed=embed, view=view)
+        await ctx.send(embed=embed, view=HelpView(ctx.author.id))
 
-
-# -------------------- Setup --------------------
+# -------------------- SETUP --------------------
 async def setup(bot):
     await bot.add_cog(Help(bot))
