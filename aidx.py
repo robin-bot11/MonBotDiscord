@@ -80,8 +80,11 @@ class HelpSelect(discord.ui.Select):
         elif cat == "Bienvenue":
             embed.title = "Bienvenue"
             embed.description = (
-                "**+setwelcome `<message>`**\n↳ Configure le message de bienvenue\n\n"
-                "**+setwelcomechannel `<#channel>`**\n↳ Définit le salon pour le message de bienvenue"
+                "**+setwelcome `<#channel> <message>`**\n↳ Configure un message de bienvenue simple\n\n"
+                "**+setwelcomeembed `<#channel> <title> <description> [thumbnail_url] [image_url]`**\n↳ Configure un embed de bienvenue\n\n"
+                "**+setwelcomechannel `<#channel>`**\n↳ Définit le salon pour le welcome\n\n"
+                "**+delwelcome**\n↳ Supprime la configuration du welcome\n\n"
+                "**+togglewelcome**\n↳ Active ou désactive le welcome sans supprimer la configuration"
             )
 
         # ---------------- Partenariat ----------------
