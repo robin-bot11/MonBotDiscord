@@ -1,11 +1,9 @@
-# help.py
 import discord
 from discord.ext import commands
-from discord.ui import View, Select, Button
+from discord.ui import View, Button, Select
 
 COLOR = 0x6b00cb
 
-# -------------------- COMMANDES PAR CATÉGORIE --------------------
 COMMANDS = {
     "Bienvenue / Vérification": [
         {"name": "+setupverify", "desc": "Configurer la vérification avec emoji"},
@@ -39,78 +37,124 @@ COMMANDS = {
         {"name": "+logvoice", "desc": "Logs vocaux"},
         {"name": "+logchannel", "desc": "Logs de création/suppression/modification de salon"},
         {"name": "+logmessage", "desc": "Logs messages supprimés/édités"}
+    ],
+    "Owner": [
+        {"name": "+ping", "desc": "Vérifie la latence du bot"},
+        {"name": "+dm", "desc": "Envoie un message privé à un membre"},
+        {"name": "+backupconfig", "desc": "Sauvegarde la configuration du bot"},
+        {"name": "+restoreconfig", "desc": "Restaure la configuration depuis la sauvegarde"},
+        {"name": "+resetwarns", "desc": "Réinitialise tous les warns d'un membre"},
+        {"name": "+checkrole", "desc": "Vérifie un rôle spécifique"},
+        {"name": "+checkchannel", "desc": "Vérifie un salon spécifique"},
+        {"name": "+checkmember", "desc": "Vérifie un membre spécifique"},
+        {"name": "+listbots", "desc": "Liste tous les bots du serveur"},
+        {"name": "+servers", "desc": "Affiche les serveurs du bot"},
+        {"name": "+invite", "desc": "Donne le lien d'invitation du bot"},
+        {"name": "+shutdownbot", "desc": "Éteint le bot"},
+        {"name": "+restartbot", "desc": "Redémarre le bot"},
+        {"name": "+eval", "desc": "Exécute du code Python"}
     ]
 }
 
-# -------------------- MENU DÉROULANT --------------------
+# -------------------- EMBED GENERATOR --------------------
+def generate_embed(category: str):
+    cmds = COMMANDS.get(category, [])
+    description = ""
+    if not cmds:
+        description = "Aucune commande trouvée pour cette catégorie."
+    else:
+        for cmd in cmds:
+            description += f"**{cmd['name']}** — {cmd['desc']}\n"
+    embed = discord.Embed(title=f"📂 {category}", description=description, color=COLOR)
+    return embed
+
+# -------------------- VIEW DASHBOARD --------------------
+class HelpView(View):
+    def __init__(self, user_id, owner_id):
+        super().__init__(timeout=None)
+        self.user_id = user_id
+        self.owner_id = owner_id
+
+        # Menu déroulant
+        self.add_item(HelpSelect(user_id, owner_id))
+
+        # Barre de boutons
+        for cat in ["Bienvenue / Vérification", "Fun", "Modération", "Logs / Snipe"]:
+            self.add_item(CategoryButton(label=cat, user_id=user_id))
+
+        if user_id == owner_id:
+            self.add_item(CategoryButton(label="Owner", user_id=user_id))
+
+        # Bouton Retour
+        self.add_item(BackButton(user_id))
+
 class HelpSelect(Select):
-    def __init__(self, user_id):
-        options = [discord.SelectOption(label=cat) for cat in COMMANDS.keys()]
+    def __init__(self, user_id, owner_id):
+        options = [discord.SelectOption(label=cat) for cat in COMMANDS.keys() if cat != "Owner"]
+        if user_id == owner_id:
+            options.append(discord.SelectOption(label="Owner"))
         super().__init__(placeholder="Sélectionnez une catégorie", min_values=1, max_values=1, options=options)
         self.user_id = user_id
+        self.owner_id = owner_id
 
     async def callback(self, interaction: discord.Interaction):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("❌ Ce menu n'est pas pour vous.", ephemeral=True)
+        embed = generate_embed(self.values[0])
+        await interaction.response.edit_message(embed=embed, view=self.view)
 
-        category = self.values[0]
-        cmds = COMMANDS.get(category, [])
-        if not cmds:
-            description = "Aucune commande trouvée pour cette catégorie."
-        else:
-            description = ""
-            for cmd in cmds:
-                desc = cmd["desc"] if cmd.get("desc") else "Pas de description"
-                description += f"**{cmd['name']}** — {desc}\n"
-
-        embed = discord.Embed(title=f"📂 {category}", description=description, color=COLOR)
-        await interaction.response.edit_message(embed=embed, view=HelpView(self.user_id))
-
-# -------------------- VUE --------------------
-class HelpView(View):
-    def __init__(self, user_id):
-        super().__init__(timeout=None)
+class CategoryButton(Button):
+    def __init__(self, label, user_id):
+        super().__init__(label=label, style=discord.ButtonStyle.primary, custom_id=f"help_btn_{label}")
         self.user_id = user_id
-        self.add_item(HelpSelect(user_id))
 
-    @discord.ui.button(label="Retour", style=discord.ButtonStyle.secondary, custom_id="help_back_button")
-    async def back_button(self, button: Button, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("❌ Ce bouton n'est pas pour vous.", ephemeral=True)
+        embed = generate_embed(self.label)
+        await interaction.response.edit_message(embed=embed, view=self.view)
 
+class BackButton(Button):
+    def __init__(self, user_id):
+        super().__init__(label="Retour", style=discord.ButtonStyle.secondary, custom_id="help_back_button")
+        self.user_id = user_id
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("❌ Ce bouton n'est pas pour vous.", ephemeral=True)
         embed = discord.Embed(
             title="📖 Menu d'aide",
             description=(
-                "Tu as fait +help ?\n\n"
                 "Bienvenue sur le menu d’aide du bot !\n"
-                "Sélectionne une catégorie dans le menu ci-dessous pour voir les commandes disponibles.\n\n"
+                "Sélectionne une catégorie dans le menu ou la barre de boutons pour voir les commandes.\n"
                 "Certaines commandes sont protégées et réservées au propriétaire."
             ),
             color=COLOR
         )
-
-        await interaction.response.edit_message(embed=embed, view=HelpView(self.user_id))
+        await interaction.response.edit_message(embed=embed, view=self.view)
 
 # -------------------- COG --------------------
 class Help(commands.Cog):
-    """Menu d'aide avec sélection de catégorie"""
+    """Menu d'aide interactif style dashboard"""
 
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command()
     async def help(self, ctx):
+        owner_id = await self.bot.application_info()
+        owner_id = owner_id.owner.id
+
         embed = discord.Embed(
             title="📖 Menu d'aide",
             description=(
-                "Tu as fait +help ?\n\n"
                 "Bienvenue sur le menu d’aide du bot !\n"
-                "Sélectionne une catégorie dans le menu ci-dessous pour voir les commandes disponibles.\n\n"
+                "Sélectionne une catégorie dans le menu ou la barre de boutons pour voir les commandes.\n"
                 "Certaines commandes sont protégées et réservées au propriétaire."
             ),
             color=COLOR
         )
-        await ctx.send(embed=embed, view=HelpView(ctx.author.id))
+        await ctx.send(embed=embed, view=HelpView(ctx.author.id, owner_id))
 
 # -------------------- SETUP --------------------
 async def setup(bot):
