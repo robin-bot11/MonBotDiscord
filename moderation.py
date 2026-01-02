@@ -1,4 +1,3 @@
-# moderation.py
 from discord.ext import commands
 import discord
 from datetime import datetime, timedelta
@@ -25,11 +24,6 @@ class Moderation(commands.Cog):
         await member.kick(reason=reason)
         await ctx.send(f"{member.mention} a été expulsé. Raison : {reason}")
 
-    @kick.error
-    async def kick_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send("Vous n'avez pas la permission d'expulser des membres.")
-
     # ------------------ BAN ------------------
     @commands.command()
     @commands.has_permissions(ban_members=True)
@@ -44,11 +38,6 @@ class Moderation(commands.Cog):
         await member.ban(reason=reason)
         await ctx.send(f"{member.mention} a été banni. Raison : {reason}")
 
-    @ban.error
-    async def ban_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send("Vous n'avez pas la permission de bannir des membres.")
-
     # ------------------ UNBAN ------------------
     @commands.command()
     @commands.has_permissions(ban_members=True)
@@ -56,11 +45,6 @@ class Moderation(commands.Cog):
         user = await self.bot.fetch_user(user_id)
         await ctx.guild.unban(user)
         await ctx.send(f"{user} a été débanni.")
-
-    @uban.error
-    async def uban_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send("Vous n'avez pas la permission de débannir des membres.")
 
     # ------------------ MUTE ------------------
     @commands.command()
@@ -81,11 +65,6 @@ class Moderation(commands.Cog):
             pass
         await ctx.send(f"{member.mention} a été mute. Raison : {reason}")
 
-    @mute.error
-    async def mute_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send("Vous n'avez pas la permission de mute des membres.")
-
     # ------------------ UNMUTE ------------------
     @commands.command()
     @commands.has_permissions(manage_roles=True)
@@ -103,11 +82,6 @@ class Moderation(commands.Cog):
             await ctx.send(f"{member.mention} a été unmute.")
         else:
             await ctx.send("Le membre n'était pas mute.")
-
-    @unmute.error
-    async def unmute_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send("Vous n'avez pas la permission de unmute des membres.")
 
     # ------------------ TIMEOUT ------------------
     @commands.command()
@@ -128,12 +102,7 @@ class Moderation(commands.Cog):
         except Exception as e:
             await ctx.send(f"Impossible de mettre en timeout : {e}")
 
-    @timeout.error
-    async def timeout_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send("Vous n'avez pas la permission de mettre en timeout des membres.")
-
-    # ------------------ GIVE ROLE ------------------
+    # ------------------ GIVE ROLE / TAKE ROLE ------------------
     @commands.command()
     @commands.has_permissions(manage_roles=True)
     async def giverole(self, ctx, member_id: int, role_id: int):
@@ -144,12 +113,6 @@ class Moderation(commands.Cog):
         await member.add_roles(role)
         await ctx.send(f"Le rôle {role.name} a été donné à {member.mention}.")
 
-    @giverole.error
-    async def giverole_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send("Vous n'avez pas la permission de gérer les rôles.")
-
-    # ------------------ TAKE ROLE ------------------
     @commands.command()
     @commands.has_permissions(manage_roles=True)
     async def takerole(self, ctx, member_id: int, role_id: int):
@@ -159,11 +122,6 @@ class Moderation(commands.Cog):
             return await ctx.send("Membre ou rôle introuvable avec ces IDs.")
         await member.remove_roles(role)
         await ctx.send(f"Le rôle {role.name} a été retiré à {member.mention}.")
-
-    @takerole.error
-    async def takerole_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send("Vous n'avez pas la permission de gérer les rôles.")
 
     # ------------------ WARN ------------------
     @commands.command()
@@ -180,12 +138,6 @@ class Moderation(commands.Cog):
             pass
         await ctx.send(f"{member.mention} a été averti. Raison : {reason}")
 
-    @warn.error
-    async def warn_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send("Vous n'avez pas la permission de gérer les messages.")
-
-    # ------------------ LISTE DES WARNS ------------------
     @commands.command()
     @commands.has_permissions(manage_messages=True)
     async def warns(self, ctx, member_id: int):
@@ -200,7 +152,6 @@ class Moderation(commands.Cog):
             msg += f"{i} - {w['reason']} - par {w['staff']} - {w['date']}\n"
         await ctx.send(msg)
 
-    # ------------------ SUPPRIMER UN WARN ------------------
     @commands.command()
     @commands.has_permissions(manage_messages=True)
     async def unwarn(self, ctx, member_id: int, warn_number: int):
@@ -211,11 +162,6 @@ class Moderation(commands.Cog):
         else:
             await ctx.send("Aucun warn correspondant trouvé.")
 
-    @unwarn.error
-    async def unwarn_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send("Vous n'avez pas la permission de gérer les messages.")
-
     # ------------------ PURGE ------------------
     @commands.command()
     @commands.has_permissions(manage_messages=True)
@@ -223,22 +169,12 @@ class Moderation(commands.Cog):
         deleted = await ctx.channel.purge(limit=amount)
         await ctx.send(f"{len(deleted)} messages supprimés.", delete_after=5)
 
-    @purge.error
-    async def purge_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send("Vous n'avez pas la permission de gérer les messages.")
-
-    # ------------------ PURGE ALL ------------------
     @commands.command()
     @commands.has_permissions(manage_messages=True)
     async def purgeall(self, ctx):
         deleted = await ctx.channel.purge()
         await ctx.send(f"Tous les messages du salon ont été supprimés.", delete_after=5)
 
-    @purgeall.error
-    async def purgeall_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send("Vous n'avez pas la permission de gérer les messages.")
 
 # ------------------ Setup ------------------
 async def setup(bot):
