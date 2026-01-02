@@ -2,12 +2,13 @@ import discord
 from discord.ext import commands
 from discord.ui import View, Button, Select
 import random
-from storx import Database  # Ta base de données renommée
+from storx import Database
 
 COLOR_DEFAULT = 0x6b00cb
 MAX_TRIES = 3
 EMOJIS = ["🩵", "💚", "🩷", "🧡", "💜"]
 
+# -------------------- Sélection d'emoji --------------------
 class VerificationSelect(Select):
     def __init__(self, correct_emoji, member, role_valid, role_isolation, db, guild_id):
         self.correct_emoji = correct_emoji
@@ -23,8 +24,7 @@ class VerificationSelect(Select):
         if interaction.user.id != self.member.id:
             return await interaction.response.send_message("❌ Ce bouton n'est pas pour vous.", ephemeral=True)
 
-        data = self.db.data.setdefault("verification", {}).setdefault(str(self.guild_id), {})
-        tries = data.setdefault("tries", {}).get(str(self.member.id), 0)
+        tries = self.db.add_try(self.guild_id, self.member.id)
 
         if self.values[0] == self.correct_emoji:
             try:
@@ -32,13 +32,10 @@ class VerificationSelect(Select):
                 if self.role_isolation:
                     await self.member.remove_roles(self.role_isolation, reason="Vérification réussie")
                 await interaction.response.edit_message(content="✅ Vérification réussie !", view=None)
+                self.db.reset_tries(self.guild_id, self.member.id)
             except discord.Forbidden:
                 await interaction.response.send_message("❌ Permissions insuffisantes.", ephemeral=True)
             return
-
-        tries += 1
-        data["tries"][str(self.member.id)] = tries
-        self.db.save()
 
         if tries >= MAX_TRIES:
             try:
@@ -47,9 +44,12 @@ class VerificationSelect(Select):
                 pass
             await interaction.response.edit_message(content="❌ Échec. Vous avez été expulsé.", view=None)
         else:
-            await interaction.response.send_message(f"❌ Mauvais choix. Tentatives restantes : {MAX_TRIES - tries}.", ephemeral=True)
+            await interaction.response.send_message(
+                f"❌ Mauvais choix. Tentatives restantes : {MAX_TRIES - tries}.", ephemeral=True
+            )
 
 
+# -------------------- Vue du bouton --------------------
 class VerificationView(View):
     def __init__(self, correct_emoji, member, role_valid, role_isolation, db, guild_id, button_text):
         super().__init__(timeout=None)
@@ -66,10 +66,13 @@ class VerificationView(View):
         if interaction.user.id != self.member.id:
             return await interaction.response.send_message("❌ Ce bouton n'est pas pour vous.", ephemeral=True)
         view = View(timeout=None)
-        view.add_item(VerificationSelect(self.correct_emoji, self.member, self.role_valid, self.role_isolation, self.db, self.guild_id))
+        view.add_item(VerificationSelect(
+            self.correct_emoji, self.member, self.role_valid, self.role_isolation, self.db, self.guild_id
+        ))
         await interaction.response.edit_message(content="Sélectionnez l'emoji correct :", view=view)
 
 
+# -------------------- Cog Welcome + Vérification --------------------
 class WelcomeVerification(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -81,8 +84,6 @@ class WelcomeVerification(commands.Cog):
     async def setupverify(self, ctx):
         """Configurer la vérification avec emoji"""
         guild_id = str(ctx.guild.id)
-        self.db.data.setdefault("verification", {})
-        self.db.data["verification"].setdefault(guild_id, {})
 
         await ctx.send("📌 Entrez le titre de l'embed de vérification :")
         title = (await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)).content
@@ -97,11 +98,10 @@ class WelcomeVerification(commands.Cog):
         role_msg = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
         role_valid = ctx.guild.get_role(int(role_msg.content.strip("<@&>")))
 
-        data = self.db.data["verification"][guild_id]
-        role_isolation = None
-        if "isolation_role" not in data:
+        # Gestion rôle isolation
+        data = self.db.get_verification(guild_id)
+        if "isolation_role" not in data or data["isolation_role"] is None:
             role_isolation = await ctx.guild.create_role(name="Non vérifié", reason="Rôle automatique")
-            data["isolation_role"] = role_isolation.id
             for channel in ctx.guild.channels:
                 try:
                     await channel.set_permissions(role_isolation, read_messages=False)
@@ -110,68 +110,53 @@ class WelcomeVerification(commands.Cog):
         else:
             role_isolation = ctx.guild.get_role(data["isolation_role"])
 
-        data.update({"title": title, "description": description, "button_text": button_text, "role_valid": role_valid.id})
-        self.db.save()
-
-        embed = discord.Embed(title=title, description=description, color=COLOR_DEFAULT)
+        # Enregistrement DB
         emoji = random.choice(EMOJIS)
-        view = VerificationView(correct_emoji=emoji, member=None, role_valid=role_valid, role_isolation=role_isolation, db=self.db, guild_id=ctx.guild.id, button_text=button_text)
-        msg = await ctx.send(embed=embed, view=view)
-        data["message_id"] = msg.id
-        data["emoji"] = emoji
-        self.db.save()
+        msg = await ctx.send(embed=discord.Embed(title=title, description=description, color=COLOR_DEFAULT),
+                             view=VerificationView(emoji, None, role_valid, role_isolation, self.db, ctx.guild.id, button_text))
+        self.db.set_verification(guild_id,
+                                 role_valid=role_valid.id,
+                                 isolation_role=role_isolation.id if role_isolation else None,
+                                 title=title,
+                                 description=description,
+                                 button_text=button_text,
+                                 message_id=msg.id,
+                                 emoji=emoji)
+
         await ctx.send("✅ Système de vérification configuré.")
 
     @commands.command()
     @commands.has_permissions(administrator=True)
     async def setwelcome(self, ctx, channel: discord.TextChannel, *, message):
         """Configurer le welcome simple (texte)"""
-        guild_id = str(ctx.guild.id)
-        self.db.data.setdefault("welcome", {})
-        self.db.data["welcome"][guild_id] = {"channel": channel.id, "type": "text", "message": message, "enabled": True}
-        self.db.save()
+        self.db.set_welcome(str(ctx.guild.id), channel_id=channel.id, message=message, embed_data=None, enabled=True)
         await ctx.send(f"✅ Welcome configuré dans {channel.mention}")
 
     @commands.command()
     @commands.has_permissions(administrator=True)
     async def setwelcomeembed(self, ctx, channel: discord.TextChannel, title, description, thumbnail_url=None, image_url=None):
         """Configurer le welcome en embed"""
-        guild_id = str(ctx.guild.id)
-        self.db.data.setdefault("welcome", {})
-        self.db.data["welcome"][guild_id] = {
-            "channel": channel.id,
-            "type": "embed",
-            "title": title,
-            "description": description,
-            "thumbnail": thumbnail_url,
-            "image": image_url,
-            "enabled": True
-        }
-        self.db.save()
+        embed_data = {"title": title, "description": description, "thumbnail": thumbnail_url, "image": image_url}
+        self.db.set_welcome(str(ctx.guild.id), channel_id=channel.id, message=None, embed_data=embed_data, enabled=True)
         await ctx.send(f"✅ Embed de bienvenue configuré dans {channel.mention}")
 
     @commands.command()
     @commands.has_permissions(administrator=True)
     async def togglewelcome(self, ctx):
         """Activer / désactiver le welcome sans supprimer la config"""
-        guild_id = str(ctx.guild.id)
-        welcome_data = self.db.data.get("welcome", {}).get(guild_id)
-        if not welcome_data:
-            return await ctx.send("⚠️ Aucun welcome configuré")
-        welcome_data["enabled"] = not welcome_data.get("enabled", True)
-        self.db.data["welcome"][guild_id] = welcome_data
-        self.db.save()
-        state = "activé" if welcome_data["enabled"] else "désactivé"
-        await ctx.send(f"✅ Welcome {state}")
+        state = self.db.toggle_welcome(str(ctx.guild.id))
+        if state is None:
+            await ctx.send("⚠️ Aucun welcome configuré")
+        else:
+            await ctx.send(f"✅ Welcome {'activé' if state else 'désactivé'}")
 
     # ----------------- Listener -----------------
     @commands.Cog.listener()
     async def on_member_join(self, member):
         guild_id = str(member.guild.id)
-        data = self.db.data.get("verification", {}).get(guild_id, {})
-        welcome_data = self.db.data.get("welcome", {}).get(guild_id)
 
-        # Rôle d’isolation automatique
+        # Vérification isolation
+        data = self.db.get_verification(guild_id)
         isolation_role_id = data.get("isolation_role")
         if isolation_role_id:
             role = member.guild.get_role(isolation_role_id)
@@ -181,19 +166,24 @@ class WelcomeVerification(commands.Cog):
                 except discord.Forbidden:
                     pass
 
-        # Envoi welcome si activé
-        if welcome_data and welcome_data.get("enabled", True):
-            channel = member.guild.get_channel(welcome_data["channel"])
+        # Welcome
+        welcome_data = self.db.get_welcome(guild_id)
+        if welcome_data.get("enabled", True):
+            channel = member.guild.get_channel(welcome_data.get("channel"))
             if channel:
-                if welcome_data["type"] == "text":
-                    await channel.send(welcome_data["message"].replace("{user}", member.mention))
-                else:
-                    embed = discord.Embed(title=welcome_data.get("title", "Bienvenue !"), description=welcome_data.get("description", "").replace("{user}", member.mention), color=COLOR_DEFAULT)
-                    if welcome_data.get("thumbnail"):
-                        embed.set_thumbnail(url=welcome_data["thumbnail"])
-                    if welcome_data.get("image"):
-                        embed.set_image(url=welcome_data["image"])
+                if welcome_data.get("embed"):
+                    embed = discord.Embed(
+                        title=welcome_data["embed"].get("title", "Bienvenue !"),
+                        description=welcome_data["embed"].get("description", "").replace("{user}", member.mention),
+                        color=COLOR_DEFAULT
+                    )
+                    if welcome_data["embed"].get("thumbnail"):
+                        embed.set_thumbnail(url=welcome_data["embed"]["thumbnail"])
+                    if welcome_data["embed"].get("image"):
+                        embed.set_image(url=welcome_data["embed"]["image"])
                     await channel.send(embed=embed)
+                else:
+                    await channel.send(welcome_data.get("message", "").replace("{user}", member.mention))
 
 # ----------------- Setup -----------------
 async def setup(bot):
