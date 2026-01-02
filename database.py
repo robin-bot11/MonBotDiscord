@@ -12,7 +12,7 @@ class Database:
                 json.dump({
                     "warns": {},
                     "welcome": {},
-                    "gyroles": [],
+                    "gyroles": {},
                     "lock_roles": {},
                     "rules": {},
                     "snipes": {},
@@ -43,6 +43,7 @@ class Database:
 
     # ------------------ Warns ------------------
     def add_warn(self, guild_id, member_id, reason, staff, date):
+        self.data.setdefault("warns", {})
         self.data["warns"].setdefault(str(guild_id), {})
         self.data["warns"][str(guild_id)].setdefault(str(member_id), [])
         self.data["warns"][str(guild_id)][str(member_id)].append({
@@ -53,10 +54,10 @@ class Database:
         self.save()
 
     def get_warns(self, guild_id, member_id):
-        return self.data["warns"].get(str(guild_id), {}).get(str(member_id), [])
+        return self.data.get("warns", {}).get(str(guild_id), {}).get(str(member_id), [])
 
     def del_warn(self, guild_id, member_id, index):
-        guild_warns = self.data["warns"].get(str(guild_id), {})
+        guild_warns = self.data.get("warns", {}).get(str(guild_id), {})
         if str(member_id) in guild_warns:
             if 0 <= index < len(guild_warns[str(member_id)]):
                 del guild_warns[str(member_id)][index]
@@ -66,42 +67,49 @@ class Database:
 
     # ------------------ Welcome ------------------
     def set_welcome_message(self, guild_id, message):
+        self.data.setdefault("welcome", {})
         self.data["welcome"].setdefault(str(guild_id), {})
         self.data["welcome"][str(guild_id)]["message"] = message
         self.save()
 
     def set_welcome_channel(self, guild_id, channel_id):
+        self.data.setdefault("welcome", {})
         self.data["welcome"].setdefault(str(guild_id), {})
         self.data["welcome"][str(guild_id)]["channel"] = channel_id
         self.save()
 
     def get_welcome(self, guild_id):
-        return self.data["welcome"].get(str(guild_id), {})
+        return self.data.get("welcome", {}).get(str(guild_id), {})
 
-    # ------------------ Giveaway roles ------------------
-    def add_gyrole(self, role_id):
-        if role_id not in self.data["gyroles"]:
-            self.data["gyroles"].append(role_id)
+    # ------------------ Giveaway roles (isolés par serveur) ------------------
+    def add_gyrole(self, guild_id, role_id):
+        self.data.setdefault("gyroles", {})
+        self.data["gyroles"].setdefault(str(guild_id), [])
+        if role_id not in self.data["gyroles"][str(guild_id)]:
+            self.data["gyroles"][str(guild_id)].append(role_id)
             self.save()
 
-    def remove_gyrole(self, role_id):
-        if role_id in self.data["gyroles"]:
-            self.data["gyroles"].remove(role_id)
-            self.save()
+    def remove_gyrole(self, guild_id, role_id):
+        if str(guild_id) in self.data.get("gyroles", {}):
+            if role_id in self.data["gyroles"][str(guild_id)]:
+                self.data["gyroles"][str(guild_id)].remove(role_id)
+                self.save()
 
-    def get_gyroles(self):
-        return self.data["gyroles"]
+    def get_gyroles(self, guild_id):
+        return self.data.get("gyroles", {}).get(str(guild_id), [])
 
     # ------------------ Lock roles ------------------
     def set_lock_roles(self, guild_id, roles):
+        self.data.setdefault("lock_roles", {})
         self.data["lock_roles"][str(guild_id)] = roles
         self.save()
 
     def get_lock_roles(self, guild_id):
-        return self.data["lock_roles"].get(str(guild_id), [])
+        return self.data.get("lock_roles", {}).get(str(guild_id), [])
 
     # ------------------ Règlement ------------------
     def set_rule(self, guild_id, title, text, role_id, button_text, emoji, image=None):
+        self.data.setdefault("rules", {})
         self.data["rules"][str(guild_id)] = {
             "title": title,
             "text": text,
@@ -113,15 +121,16 @@ class Database:
         self.save()
 
     def get_rule(self, guild_id):
-        return self.data["rules"].get(str(guild_id), {})
+        return self.data.get("rules", {}).get(str(guild_id), {})
 
     # ------------------ Snipes ------------------
     def set_snipe(self, channel_id, message):
+        self.data.setdefault("snipes", {})
         self.data["snipes"][str(channel_id)] = message
         self.save()
 
     def get_snipe(self, channel_id):
-        return self.data["snipes"].get(str(channel_id))
+        return self.data.get("snipes", {}).get(str(channel_id))
 
     # ------------------ Partenariat ------------------
     def set_partner_role(self, guild_id, role_id):
