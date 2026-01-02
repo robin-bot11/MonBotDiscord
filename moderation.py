@@ -1,7 +1,7 @@
 # moderation.py
 from discord.ext import commands
 import discord
-from datetime import datetime
+from datetime import datetime, timedelta
 from database import Database
 
 COLOR = 0x6b00cb
@@ -108,6 +108,30 @@ class Moderation(commands.Cog):
     async def unmute_error(self, ctx, error):
         if isinstance(error, commands.MissingPermissions):
             await ctx.send("Vous n'avez pas la permission de unmute des membres.")
+
+    # ------------------ TIMEOUT ------------------
+    @commands.command()
+    @commands.has_permissions(moderate_members=True)
+    async def timeout(self, ctx, member_id: int, duration: int):
+        """Met un membre en timeout (minutes, max 28 jours)"""
+        member = ctx.guild.get_member(member_id)
+        if not member:
+            return await ctx.send("Membre introuvable avec cet ID.")
+        
+        if duration > 40320:  # 28 jours
+            return await ctx.send("⛔ Durée maximale : 28 jours (40320 minutes).")
+        
+        until = discord.utils.utcnow() + timedelta(minutes=duration)
+        try:
+            await member.edit(timed_out_until=until)
+            await ctx.send(f"{member.mention} est en timeout pour {duration} minutes.")
+        except Exception as e:
+            await ctx.send(f"Impossible de mettre en timeout : {e}")
+
+    @timeout.error
+    async def timeout_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.send("Vous n'avez pas la permission de mettre en timeout des membres.")
 
     # ------------------ GIVE ROLE ------------------
     @commands.command()
