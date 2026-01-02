@@ -82,8 +82,6 @@ class HelpSelect(discord.ui.Select):
             embed.description = (
                 "**+setwelcome `<#channel> <message>`**\n↳ Configure un message de bienvenue simple\n\n"
                 "**+setwelcomeembed `<#channel> <title> <description> [thumbnail_url] [image_url]`**\n↳ Configure un embed de bienvenue\n\n"
-                "**+setwelcomechannel `<#channel>`**\n↳ Définit le salon pour le welcome\n\n"
-                "**+delwelcome**\n↳ Supprime la configuration du welcome\n\n"
                 "**+togglewelcome**\n↳ Active ou désactive le welcome sans supprimer la configuration"
             )
 
@@ -107,9 +105,7 @@ class HelpSelect(discord.ui.Select):
         elif cat == "Vérification":
             embed.title = "Vérification"
             embed.description = (
-                "**+setupverify**\n↳ Lance la configuration interactive complète de la vérification\n\n"
-                "Inclut : titre, description, texte du bouton, rôle à donner après vérification, "
-                "rôle d'isolation automatique, message interactif avec sélection d'emoji et 3 essais max"
+                "**+setupverify**\n↳ Configure la vérification emoji avec rôle isolation et 3 essais max"
             )
 
         # ---------------- Owner ----------------
