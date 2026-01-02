@@ -37,11 +37,12 @@ class HelpSelect(discord.ui.Select):
                 "**+kick `<ID> <raison>`**\n↳ Expulse temporairement un membre\n\n"
                 "**+ban `<ID> <raison>`**\n↳ Banni définitivement un membre\n\n"
                 "**+uban `<ID>`**\n↳ Retire un ban\n\n"
-                "**+mute `<ID> <raison>`**\n↳ Rend un membre muet (il ne pourra plus envoyer de messages)\n\n"
+                "**+mute `<ID> <raison>`**\n↳ Rend un membre muet\n\n"
                 "**+unmute `<ID>`**\n↳ Retire le mute\n\n"
                 "**+warn `<ID> <raison>`**\n↳ Donne un avertissement\n\n"
                 "**+unwarn `<ID> <num>`**\n↳ Supprime un avertissement spécifique\n\n"
                 "**+warns `<ID>`**\n↳ Affiche tous les avertissements\n\n"
+                "**+resetwarns `<ID>`**\n↳ Supprime tous les warns d'un membre\n\n"
                 "**+purge `<nombre>`**\n↳ Supprime un nombre précis de messages\n\n"
                 "**+purgeall**\n↳ Supprime tous les messages du salon\n\n"
                 "**+timeout `<ID> <durée>`**\n↳ Timeout temporaire d’un membre (max 28 jours)"
@@ -107,7 +108,18 @@ class HelpSelect(discord.ui.Select):
                 "**+ping**\n↳ Vérifie la latence\n\n"
                 "**+dm `<ID> <message>`**\n↳ Envoie un message privé\n\n"
                 "**+backupconfig**\n↳ Sauvegarde la configuration\n\n"
-                "**+restoreconfig**\n↳ Restaure la configuration"
+                "**+restoreconfig**\n↳ Restaure la configuration\n\n"
+                "**+shutdownbot**\n↳ Éteint le bot\n\n"
+                "**+restartbot**\n↳ Redémarre le bot\n\n"
+                "**+poweron**\n↳ Relance les services internes\n\n"
+                "**+eval `<code>`**\n↳ Évalue du code Python\n\n"
+                "**+servers `<page>`**\n↳ Liste les serveurs avec pagination\n\n"
+                "**+invite `<ID serveur>`**\n↳ Envoie une invitation pour un serveur\n\n"
+                "**+listbots**\n↳ Liste tous les bots sur le serveur\n\n"
+                "**+checkrole `<ID>`**\n↳ Affiche les permissions d’un rôle\n\n"
+                "**+checkchannel `<ID>`**\n↳ Affiche les infos d’un salon\n\n"
+                "**+checkmember `<ID>`**\n↳ Affiche les rôles et permissions d’un membre\n\n"
+                "**+resetwarns `<ID>`**\n↳ Supprime tous les warns d’un membre"
             )
 
         await interaction.response.edit_message(embed=embed, view=self.view)
@@ -116,7 +128,7 @@ class HelpSelect(discord.ui.Select):
 # ---------------- Vue pour le menu (permanente) ----------------
 class HelpView(discord.ui.View):
     def __init__(self, is_owner: bool):
-        super().__init__(timeout=None)  # ← Permanent
+        super().__init__(timeout=None)  # Permanent
         self.add_item(HelpSelect(is_owner))
 
 
@@ -142,7 +154,7 @@ class Aide(commands.Cog):
 
         try:
             await ctx.author.send(embed=embed, view=HelpView(ctx.author.id == OWNER_ID))
-            await ctx.reply("📬 **Aide envoyée en message privé.**", mention_author=False)
+            await ctx.reply("📬 Aide envoyée en message privé.", mention_author=False)
         except discord.Forbidden:
             await ctx.reply("❌ Impossible de t’envoyer un MP.")
 
