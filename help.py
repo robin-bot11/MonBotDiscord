@@ -106,7 +106,7 @@ class HelpSelect(discord.ui.Select):
             embed.description = (
                 "**+setverifyrole `<@rôle>`**\n↳ Définit le rôle à donner après vérification\n\n"
                 "**+setunverifiedrole `<@rôle>`**\n↳ Définit le rôle à retirer après vérification (optionnel)\n\n"
-                "**+sendverify `<#salon>` `<titre>` `<description>`**\n↳ Envoie l'embed interactif de vérification"
+                "**+sendverify `<#salon>` `<titre>` <description>`**\n↳ Envoie l'embed interactif de vérification"
             )
 
         # ---------------- Owner ----------------
@@ -153,8 +153,7 @@ class Aide(commands.Cog):
                 "Tu as fait `+help` ?\n\n"
                 "Tu es dans **la liste de mes commandes**, je vais te guider à travers toutes mes fonctionnalités.\n\n"
                 "Tout est organisé par catégorie pour que tu puisses naviguer facilement.\n\n"
-                "Certaines commandes nécessitent des autorisations spécifiques.\n"
-                "Elles sont protégées automatiquement afin d’éviter toute utilisation non autorisée.\n\n"
+                "Certaines commandes nécessitent des autorisations spécifiques. Elles sont protégées automatiquement afin d’éviter toute utilisation non autorisée.\n\n"
                 "**Préfixe : `+`**"
             ),
             color=COLOR
