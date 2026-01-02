@@ -1,13 +1,15 @@
 import discord
 from discord.ext import commands
 import logging
+import asyncio
 
 # ---------------- CONFIG ----------------
 TOKEN = "TON_TOKEN_ICI"
 PREFIX = "+"
 intents = discord.Intents.all()
 
-bot = commands.Bot(command_prefix=PREFIX, intents=intents)
+# Désactivation de la commande help par défaut
+bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -15,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 cogs = [
     "fun",
     "giveaway",
-    "help",
+    "help",  # ici ton help.py personnalisé
     "lock",
     "logs",
     "moderation",
@@ -52,5 +54,4 @@ async def main():
         await load_cogs()
         await bot.start(TOKEN)
 
-import asyncio
 asyncio.run(main())
