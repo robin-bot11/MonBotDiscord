@@ -20,20 +20,18 @@ logging.basicConfig(
 )
 
 # ---------------- COGS ----------------
-# Noms exacts des fichiers sans .py
+# Noms exacts des fichiers .py existants
 cogs = [
     "funx",
     "givax",
     "aidx",
-    "verrouiller",
     "charlie3",
-    "moderation",
+    "moderation",       # Vérifie que database.py est présent
     "delta4",
     "message_channel",
-    "politique",
+    "policy",           # Remplace 'politique'
     "snipe",
-    "partenariat",
-    "alpha1",
+    "partnership",      # Remplace 'partenariat'
     "joinbot",
     "logx"
 ]
