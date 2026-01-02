@@ -2,32 +2,35 @@ import discord
 from discord.ext import commands
 import logging
 import asyncio
+import os
 
 # ---------------- CONFIG ----------------
-JETON_DISCORD = "TON_TOKEN_ICI"
+JETON_DISCORD = os.getenv("JETON_DISCORD")  # Variable d'environnement Railway
 PREFIX = "+"
 intents = discord.Intents.all()
 
 # Désactivation du help par défaut
 bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 # ---------------- COGS ----------------
+# Les noms doivent correspondre exactement aux fichiers sans .py
 cogs = [
     "funx",
     "givax",
-    "aide",
+    "aidx",
     "verrouiller",
-    "charlie3",     # journaux
+    "charlie3",
     "moderation",
-    "delta4",       # propriétaire
+    "delta4",
     "message_channel",
     "politique",
     "snipe",
     "partenariat",
-    "logx",
-    "joinbot"       # vérification + bienvenue fusionné
+    "alpha1",
+    "joinbot",
+    "logx"
 ]
 
 # ---------------- ÉVÉNEMENTS ----------------
@@ -53,12 +56,19 @@ async def load_cogs():
 
 # ---------------- MAIN ----------------
 async def main():
+    if not JETON_DISCORD:
+        logging.critical("❌ Jeton Discord invalide ou manquant !")
+        return
+
     async with bot:
         await load_cogs()
         try:
             await bot.start(JETON_DISCORD)
         except discord.LoginFailure:
             logging.critical("❌ Jeton Discord invalide ou manquant !")
+        except Exception as e:
+            logging.critical(f"❌ Erreur lors du démarrage du bot : {e}")
 
 # ---------------- EXEC ----------------
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
