@@ -4,25 +4,29 @@ import discord
 import asyncio
 import random
 from datetime import datetime, timedelta
+from database import Database
 
 COLOR = 0x6b00cb
 
 class Giveaway(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.db = Database()  # Base pour stocker les gyroles par serveur
         self.active_giveaways = {}  # msg_id : data
-        self.allowed_roles = set()  # rôles autorisés à lancer
 
+    # ------------------ GYROLE ------------------
     @commands.command()
     async def gyrole(self, ctx, role: discord.Role):
         if not ctx.author.guild_permissions.administrator:
             return await ctx.send("Vous n'avez pas la permission de définir les rôles autorisés.")
-        self.allowed_roles.add(role.id)
-        await ctx.send(f"Le rôle {role.name} peut maintenant lancer des giveaways.")
+        self.db.add_gyrole(ctx.guild.id, role.id)
+        await ctx.send(f"Le rôle {role.name} peut maintenant lancer des giveaways sur ce serveur.")
 
+    # ------------------ GYVEAWAY ------------------
     @commands.command()
     async def gyveaway(self, ctx, durée: str, *, récompense: str):
-        if not any(r.id in self.allowed_roles for r in ctx.author.roles) and not ctx.author.guild_permissions.administrator:
+        allowed_roles = self.db.get_gyroles(ctx.guild.id)
+        if not any(r.id in allowed_roles for r in ctx.author.roles) and not ctx.author.guild_permissions.administrator:
             return await ctx.send("Vous n'avez pas la permission de lancer un giveaway.")
 
         time_seconds = self.convert_duration(durée)
@@ -45,6 +49,7 @@ class Giveaway(commands.Cog):
 
         self.bot.loop.create_task(self.end_giveaway(msg.id, time_seconds))
 
+    # ------------------ END GIVEAWAY ------------------
     async def end_giveaway(self, msg_id, delay):
         await asyncio.sleep(delay)
         giveaway = self.active_giveaways.get(msg_id)
@@ -71,6 +76,7 @@ class Giveaway(commands.Cog):
             pass
         self.active_giveaways.pop(msg_id)
 
+    # ------------------ END MANUEL ------------------
     @commands.command()
     async def gyend(self, ctx, msg_id: int):
         if not ctx.author.guild_permissions.administrator:
@@ -80,6 +86,7 @@ class Giveaway(commands.Cog):
         await self.end_giveaway(msg_id, 0)
         await ctx.send("Le giveaway a été terminé manuellement.")
 
+    # ------------------ RESTART ------------------
     @commands.command()
     async def gyrestart(self, ctx, msg_id: int):
         if not ctx.author.guild_permissions.administrator:
@@ -92,6 +99,7 @@ class Giveaway(commands.Cog):
         await ctx.send(f"Le giveaway pour **{self.active_giveaways[msg_id]['reward']}** est relancé !")
         self.bot.loop.create_task(self.end_giveaway(msg_id, durée_restante))
 
+    # ------------------ CONVERT DURATION ------------------
     def convert_duration(self, durée: str) -> int:
         try:
             if durée.endswith("h"):
@@ -104,6 +112,6 @@ class Giveaway(commands.Cog):
             return 0
         return 0
 
-# ✅ Correct pour Discord.py 2.x
+# ------------------ Setup ------------------
 async def setup(bot):
     await bot.add_cog(Giveaway(bot))
