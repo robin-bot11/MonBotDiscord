@@ -113,10 +113,10 @@ class HelpSelect(discord.ui.Select):
         await interaction.response.edit_message(embed=embed, view=self.view)
 
 
-# ---------------- Vue pour le menu ----------------
+# ---------------- Vue pour le menu (permanente) ----------------
 class HelpView(discord.ui.View):
     def __init__(self, is_owner: bool):
-        super().__init__(timeout=180)
+        super().__init__(timeout=None)  # ← Permanent
         self.add_item(HelpSelect(is_owner))
 
 
@@ -145,6 +145,7 @@ class Aide(commands.Cog):
             await ctx.reply("📬 **Aide envoyée en message privé.**", mention_author=False)
         except discord.Forbidden:
             await ctx.reply("❌ Impossible de t’envoyer un MP.")
+
 
 # ---------------- Setup ----------------
 async def setup(bot):
