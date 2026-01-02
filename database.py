@@ -16,7 +16,8 @@ class Database:
                     "lock_roles": {},
                     "rules": {},
                     "snipes": {},
-                    "partner": {}  # Nouvelle section pour le partenariat
+                    "partner": {},
+                    "logs": {}  # Nouvelle section pour les logs
                 }, f, indent=4, ensure_ascii=False)
         self.load()
 
@@ -32,13 +33,13 @@ class Database:
     # ------------------ Backup / Restore ------------------
     def backup(self):
         shutil.copy(DB_FILE, "backup.json")
-        print("✅ Base de données sauvegardée (incluant partenaire)")
+        print("✅ Base de données sauvegardée")
 
     def restore(self):
         if os.path.exists("backup.json"):
             shutil.copy("backup.json", DB_FILE)
             self.load()
-            print("✅ Base de données restaurée (incluant partenaire)")
+            print("✅ Base de données restaurée")
 
     # ------------------ Warns ------------------
     def add_warn(self, member_id, reason, staff, date):
@@ -137,3 +138,13 @@ class Database:
 
     def get_partner_channel(self, guild_id):
         return self.data.get("partner", {}).get(str(guild_id), {}).get("channel")
+
+    # ------------------ Logs ------------------
+    def set_log_channel(self, guild_id, log_type, channel_id):
+        self.data.setdefault("logs", {})
+        self.data["logs"].setdefault(str(guild_id), {})
+        self.data["logs"][str(guild_id)][log_type] = channel_id
+        self.save()
+
+    def get_log_channel(self, guild_id, log_type):
+        return self.data.get("logs", {}).get(str(guild_id), {}).get(log_type)
