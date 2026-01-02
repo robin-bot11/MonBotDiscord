@@ -15,6 +15,7 @@ class HelpSelect(discord.ui.Select):
             discord.SelectOption(label="Bienvenue"),
             discord.SelectOption(label="Partenariat"),
             discord.SelectOption(label="Règlement"),
+            discord.SelectOption(label="Vérification")
         ]
         if is_owner:
             options.append(discord.SelectOption(label="Owner"))
@@ -97,6 +98,15 @@ class HelpSelect(discord.ui.Select):
             embed.description = (
                 "**+reglement**\n↳ Lance l’assistant interactif pour configurer le règlement\n\n"
                 "**+showreglement**\n↳ Affiche le règlement avec le bouton d’acceptation"
+            )
+
+        # ---------------- Vérification ----------------
+        elif cat == "Vérification":
+            embed.title = "Vérification"
+            embed.description = (
+                "**+setverifyrole `<@rôle>`**\n↳ Définit le rôle à donner après vérification\n\n"
+                "**+setunverifiedrole `<@rôle>`**\n↳ Définit le rôle à retirer après vérification (optionnel)\n\n"
+                "**+sendverify `<#salon>` `<titre>` <description>`**\n↳ Envoie l'embed interactif de vérification"
             )
 
         # ---------------- Owner ----------------
