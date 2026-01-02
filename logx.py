@@ -6,11 +6,11 @@ import asyncio
 COLOR = 0x6b00cb
 
 class Logx(commands.Cog):
-    """Cog pour gérer les logs (messages, salons, vocaux, modérations, rôles)."""
+    """Cog pour gérer les logs : messages, salons, vocaux, modérations et rôles."""
 
     def __init__(self, bot):
         self.bot = bot
-        self.db = getattr(bot, "db", None)  # Assure que la DB est disponible
+        self.db = getattr(bot, "db", None)  # Sécurise l'accès à la DB
 
     # -------------------- UTIL --------------------
     async def send_log(self, guild, log_type, embed):
@@ -24,8 +24,8 @@ class Logx(commands.Cog):
             await channel.send(embed=embed)
 
     async def get_audit_user(self, guild, action, target_id=None):
-        """Récupère l'utilisateur et la raison depuis les audit logs"""
-        await asyncio.sleep(1)
+        """Récupère le user et la raison depuis les audit logs"""
+        await asyncio.sleep(1)  # Laisse Discord mettre à jour les logs
         async for entry in guild.audit_logs(limit=5, action=action):
             if not target_id or (entry.target and entry.target.id == target_id):
                 return entry.user, entry.reason
@@ -143,6 +143,7 @@ class Logx(commands.Cog):
 
 # -------------------- Setup --------------------
 async def setup(bot):
-    if "logx" in bot.extensions:
-        await bot.unload_extension("logx")
+    if "Logx" in bot.cogs:
+        print("⚠️ Cog 'Logx' déjà chargé, setup ignoré.")
+        return
     await bot.add_cog(Logx(bot))
