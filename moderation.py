@@ -2,7 +2,7 @@
 from discord.ext import commands
 import discord
 from datetime import datetime, timedelta
-from database import Database
+from storx import Database  # <- Correction ici
 
 COLOR = 0x6b00cb
 MAX_TIMEOUT_MINUTES = 40320  # 28 jours
