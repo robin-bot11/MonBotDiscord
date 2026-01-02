@@ -1,4 +1,3 @@
-# giveaway.py
 from discord.ext import commands
 import discord
 import asyncio
@@ -11,7 +10,7 @@ COLOR = 0x6b00cb
 class Giveaway(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.db = Database()  # Base pour stocker les gyroles par serveur
+        self.db = Database()
         self.active_giveaways = {}  # msg_id : data
 
     # ------------------ GYROLE ------------------
@@ -20,7 +19,7 @@ class Giveaway(commands.Cog):
         if not ctx.author.guild_permissions.administrator:
             return await ctx.send("Vous n'avez pas la permission de définir les rôles autorisés.")
         self.db.add_gyrole(ctx.guild.id, role.id)
-        await ctx.send(f"Le rôle {role.name} peut maintenant lancer des giveaways sur ce serveur.")
+        await ctx.send(f"Le rôle {role.name} peut maintenant lancer des giveaways.")
 
     # ------------------ GYVEAWAY ------------------
     @commands.command()
@@ -76,7 +75,7 @@ class Giveaway(commands.Cog):
             pass
         self.active_giveaways.pop(msg_id)
 
-    # ------------------ END MANUEL ------------------
+    # ------------------ GYEND ------------------
     @commands.command()
     async def gyend(self, ctx, msg_id: int):
         if not ctx.author.guild_permissions.administrator:
@@ -86,7 +85,7 @@ class Giveaway(commands.Cog):
         await self.end_giveaway(msg_id, 0)
         await ctx.send("Le giveaway a été terminé manuellement.")
 
-    # ------------------ RESTART ------------------
+    # ------------------ GYRESTART ------------------
     @commands.command()
     async def gyrestart(self, ctx, msg_id: int):
         if not ctx.author.guild_permissions.administrator:
@@ -99,7 +98,7 @@ class Giveaway(commands.Cog):
         await ctx.send(f"Le giveaway pour **{self.active_giveaways[msg_id]['reward']}** est relancé !")
         self.bot.loop.create_task(self.end_giveaway(msg_id, durée_restante))
 
-    # ------------------ CONVERT DURATION ------------------
+    # ------------------ Helper ------------------
     def convert_duration(self, durée: str) -> int:
         try:
             if durée.endswith("h"):
