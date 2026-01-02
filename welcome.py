@@ -21,13 +21,15 @@ class Welcome(commands.Cog):
     async def setwelcome(self, ctx, *, message):
         """
         Configurer le message de bienvenue.
-        Vous pouvez utiliser {user} pour ping le membre, {server} pour le nom du serveur,
-        {members} pour le nombre de membres.
+        Vous pouvez utiliser :
+        {user}    -> pour mentionner le membre
+        {server}  -> pour le nom du serveur
+        {members} -> pour le nombre de membres
         Exemple : "Bienvenue {user} sur {server}, nous sommes {members} !"
         """
         guild_id = str(ctx.guild.id)
         self.bot.db.set_welcome_message(guild_id, message)
-        await ctx.send(f"✅ Message de bienvenue configuré !")
+        await ctx.send("✅ Message de bienvenue configuré !")
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
