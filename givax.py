@@ -1,9 +1,10 @@
+# givax.py
 from discord.ext import commands
 import discord
 import asyncio
 import random
 from datetime import datetime, timedelta
-from database import Database
+from storx import Database  # Changement ici
 
 COLOR = 0x6b00cb
 
@@ -55,16 +56,22 @@ class Giveaway(commands.Cog):
         if not giveaway:
             return
         channel = giveaway['author'].guild.text_channels[0]
-        msg = await channel.fetch_message(msg_id)
+        try:
+            msg = await channel.fetch_message(msg_id)
+        except:
+            self.active_giveaways.pop(msg_id, None)
+            return
+
         users = set()
         for reaction in msg.reactions:
             if str(reaction.emoji) == "🎉":
                 async for user in reaction.users():
                     if not user.bot:
                         users.add(user)
+
         if not users:
             await channel.send("Personne n'a participé au giveaway...")
-            self.active_giveaways.pop(msg_id)
+            self.active_giveaways.pop(msg_id, None)
             return
 
         gagnant = random.choice(list(users))
@@ -73,7 +80,7 @@ class Giveaway(commands.Cog):
             await gagnant.send(f"Félicitations ! Tu as gagné le giveaway pour **{giveaway['reward']}** sur {channel.guild.name} !")
         except:
             pass
-        self.active_giveaways.pop(msg_id)
+        self.active_giveaways.pop(msg_id, None)
 
     # ------------------ GYEND ------------------
     @commands.command()
