@@ -1,3 +1,4 @@
+# joinbot.py
 import discord
 from discord.ext import commands
 from discord.ui import View, Button, Select
@@ -48,7 +49,6 @@ class VerificationSelect(Select):
                 f"❌ Mauvais choix. Tentatives restantes : {MAX_TRIES - tries}.", ephemeral=True
             )
 
-
 # -------------------- Vue du bouton --------------------
 class VerificationView(View):
     def __init__(self, correct_emoji, member, role_valid, role_isolation, db, guild_id, button_text):
@@ -70,7 +70,6 @@ class VerificationView(View):
             self.correct_emoji, self.member, self.role_valid, self.role_isolation, self.db, self.guild_id
         ))
         await interaction.response.edit_message(content="Sélectionnez l'emoji correct :", view=view)
-
 
 # -------------------- Cog Welcome + Vérification --------------------
 class WelcomeVerification(commands.Cog):
