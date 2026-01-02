@@ -6,12 +6,12 @@ DB_FILE = "database.json"
 
 class Database:
     def __init__(self):
-        # Création du fichier s'il n'existe pas
         if not os.path.exists(DB_FILE):
             with open(DB_FILE, "w", encoding="utf-8") as f:
                 json.dump({
                     "warns": {},
                     "welcome": {},
+                    "verification": {},
                     "gyroles": {},
                     "lock_roles": {},
                     "rules": {},
@@ -66,97 +66,65 @@ class Database:
         return False
 
     # ------------------ Welcome ------------------
-    def set_welcome_message(self, guild_id, message):
+    def set_welcome(self, guild_id, channel_id=None, message=None, embed_data=None, enabled=True):
+        """
+        embed_data = {
+            "title": str,
+            "description": str,
+            "thumbnail": str or None,
+            "image": str or None
+        }
+        """
         self.data.setdefault("welcome", {})
-        self.data["welcome"].setdefault(str(guild_id), {})
-        self.data["welcome"][str(guild_id)]["message"] = message
+        self.data["welcome"][str(guild_id)] = {
+            "channel": channel_id,
+            "message": message,
+            "embed": embed_data,
+            "enabled": enabled
+        }
         self.save()
 
-    def set_welcome_channel(self, guild_id, channel_id):
-        self.data.setdefault("welcome", {})
-        self.data["welcome"].setdefault(str(guild_id), {})
-        self.data["welcome"][str(guild_id)]["channel"] = channel_id
-        self.save()
+    def toggle_welcome(self, guild_id):
+        guild_data = self.data.get("welcome", {}).get(str(guild_id))
+        if guild_data:
+            guild_data["enabled"] = not guild_data.get("enabled", True)
+            self.data["welcome"][str(guild_id)] = guild_data
+            self.save()
+            return guild_data["enabled"]
+        return None
 
     def get_welcome(self, guild_id):
         return self.data.get("welcome", {}).get(str(guild_id), {})
 
-    # ------------------ Giveaway roles (isolés par serveur) ------------------
-    def add_gyrole(self, guild_id, role_id):
-        self.data.setdefault("gyroles", {})
-        self.data["gyroles"].setdefault(str(guild_id), [])
-        if role_id not in self.data["gyroles"][str(guild_id)]:
-            self.data["gyroles"][str(guild_id)].append(role_id)
-            self.save()
-
-    def remove_gyrole(self, guild_id, role_id):
-        if str(guild_id) in self.data.get("gyroles", {}):
-            if role_id in self.data["gyroles"][str(guild_id)]:
-                self.data["gyroles"][str(guild_id)].remove(role_id)
-                self.save()
-
-    def get_gyroles(self, guild_id):
-        return self.data.get("gyroles", {}).get(str(guild_id), [])
-
-    # ------------------ Lock roles ------------------
-    def set_lock_roles(self, guild_id, roles):
-        self.data.setdefault("lock_roles", {})
-        self.data["lock_roles"][str(guild_id)] = roles
-        self.save()
-
-    def get_lock_roles(self, guild_id):
-        return self.data.get("lock_roles", {}).get(str(guild_id), [])
-
-    # ------------------ Règlement ------------------
-    def set_rule(self, guild_id, title, text, role_id, button_text, emoji, image=None):
-        self.data.setdefault("rules", {})
-        self.data["rules"][str(guild_id)] = {
+    # ------------------ Verification ------------------
+    def set_verification(self, guild_id, role_valid, isolation_role=None, title=None, description=None, button_text=None, message_id=None, emoji=None):
+        self.data.setdefault("verification", {})
+        self.data["verification"][str(guild_id)] = {
+            "role_valid": role_valid,
+            "isolation_role": isolation_role,
             "title": title,
-            "text": text,
-            "role": role_id,
-            "button": button_text,
+            "description": description,
+            "button_text": button_text,
+            "message_id": message_id,
             "emoji": emoji,
-            "image": image
+            "tries": {}
         }
         self.save()
 
-    def get_rule(self, guild_id):
-        return self.data.get("rules", {}).get(str(guild_id), {})
+    def get_verification(self, guild_id):
+        return self.data.get("verification", {}).get(str(guild_id), {})
 
-    # ------------------ Snipes ------------------
-    def set_snipe(self, channel_id, message):
-        self.data.setdefault("snipes", {})
-        self.data["snipes"][str(channel_id)] = message
+    def add_try(self, guild_id, member_id):
+        self.data.setdefault("verification", {})
+        self.data["verification"].setdefault(str(guild_id), {})
+        self.data["verification"][str(guild_id)].setdefault("tries", {})
+        tries = self.data["verification"][str(guild_id)]["tries"].get(str(member_id), 0) + 1
+        self.data["verification"][str(guild_id)]["tries"][str(member_id)] = tries
         self.save()
+        return tries
 
-    def get_snipe(self, channel_id):
-        return self.data.get("snipes", {}).get(str(channel_id))
-
-    # ------------------ Partenariat ------------------
-    def set_partner_role(self, guild_id, role_id):
-        self.data.setdefault("partner", {})
-        self.data["partner"].setdefault(str(guild_id), {})
-        self.data["partner"][str(guild_id)]["role"] = role_id
+    def reset_tries(self, guild_id, member_id):
+        self.data.setdefault("verification", {})
+        self.data["verification"].setdefault(str(guild_id), {})
+        self.data["verification"][str(guild_id)]["tries"][str(member_id)] = 0
         self.save()
-
-    def get_partner_role(self, guild_id):
-        return self.data.get("partner", {}).get(str(guild_id), {}).get("role")
-
-    def set_partner_channel(self, guild_id, channel_id):
-        self.data.setdefault("partner", {})
-        self.data["partner"].setdefault(str(guild_id), {})
-        self.data["partner"][str(guild_id)]["channel"] = channel_id
-        self.save()
-
-    def get_partner_channel(self, guild_id):
-        return self.data.get("partner", {}).get(str(guild_id), {}).get("channel")
-
-    # ------------------ Logs ------------------
-    def set_log_channel(self, guild_id, log_type, channel_id):
-        self.data.setdefault("logs", {})
-        self.data["logs"].setdefault(str(guild_id), {})
-        self.data["logs"][str(guild_id)][log_type] = channel_id
-        self.save()
-
-    def get_log_channel(self, guild_id, log_type):
-        return self.data.get("logs", {}).get(str(guild_id), {}).get(log_type)
