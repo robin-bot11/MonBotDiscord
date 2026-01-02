@@ -1,3 +1,4 @@
+# main.py
 import discord
 from discord.ext import commands
 import logging
@@ -5,17 +6,21 @@ import asyncio
 import os
 
 # ---------------- CONFIG ----------------
-JETON_DISCORD = os.getenv("JETON_DISCORD")  # Variable d'environnement Railway
+JETON_DISCORD = os.getenv("JETON_DISCORD")  # Utilisé sur Railway
 PREFIX = "+"
 intents = discord.Intents.all()
 
 # Désactivation du help par défaut
 bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+# ---------------- LOGGING ----------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
 
 # ---------------- COGS ----------------
-# Les noms doivent correspondre exactement aux fichiers sans .py
+# Noms exacts des fichiers sans .py
 cogs = [
     "funx",
     "givax",
@@ -36,7 +41,19 @@ cogs = [
 # ---------------- ÉVÉNEMENTS ----------------
 @bot.event
 async def on_ready():
-    logging.info(f"[+] {bot.user} est connecté et prêt !")
+    logging.info(f"[+] {bot.user} connecté et prêt !")
+
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("❌ Vous n'avez pas la permission d'exécuter cette commande.")
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send(f"❌ Argument manquant : {error.param}")
+    elif isinstance(error, commands.CommandNotFound):
+        pass  # Ignore les commandes inconnues
+    else:
+        logging.error(f"Erreur inattendue : {error}")
+        await ctx.send(f"❌ Une erreur est survenue : {error}")
 
 # ---------------- CHARGEMENT DES COGS ----------------
 async def load_cogs():
@@ -71,4 +88,9 @@ async def main():
 
 # ---------------- EXEC ----------------
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logging.info("Arrêt manuel du bot.")
+    except Exception as e:
+        logging.critical(f"Erreur fatale : {e}")
