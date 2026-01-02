@@ -4,7 +4,6 @@ import asyncio
 import traceback
 
 OWNER_ID = 1383790178522370058
-
 COLOR = 0x6b00cb
 
 class Creator(commands.Cog):
@@ -23,9 +22,13 @@ class Creator(commands.Cog):
             return False
         return True
 
-    async def safe_send(self, ctx, content):
+    async def safe_send(self, ctx, content, dm=False):
+        """Envoie le message dans le salon ou en DM si dm=True"""
         try:
-            await ctx.send(content)
+            if dm:
+                await ctx.author.send(content)
+            else:
+                await ctx.send(content)
         except discord.Forbidden:
             pass
 
@@ -117,7 +120,7 @@ class Creator(commands.Cog):
         msg = f"Serveurs (page {page}) :\n"
         for g in guilds[start:end]:
             msg += f"{g.name} | ID: {g.id} | Membres: {g.member_count}\n"
-        await ctx.author.send(msg)
+        await self.safe_send(ctx, msg, dm=True)  # Toujours en MP
 
     # ------------------ INVITE ------------------
     @commands.command()
@@ -125,24 +128,24 @@ class Creator(commands.Cog):
         if not await self.check_owner(ctx): return
         guild = self.bot.get_guild(guild_id)
         if not guild:
-            return await self.safe_send(ctx, "❌ Serveur introuvable.")
+            return await self.safe_send(ctx, "❌ Serveur introuvable.", dm=True)
         channel = discord.utils.get(guild.text_channels, perms__create_instant_invite=True)
         if not channel:
-            return await self.safe_send(ctx, "❌ Aucun salon disponible.")
+            return await self.safe_send(ctx, "❌ Aucun salon disponible.", dm=True)
         invite = await channel.create_invite(max_age=3600, max_uses=1)
-        await ctx.author.send(f"Invitation pour {guild.name} : {invite}")
+        await self.safe_send(ctx, f"Invitation pour {guild.name} : {invite}", dm=True)
 
     # ------------------ SHUTDOWN / RESTART ------------------
     @commands.command()
     async def shutdownbot(self, ctx):
         if not await self.check_owner(ctx): return
-        await self.safe_send(ctx, "⚠️ Arrêt du bot...")
+        await self.safe_send(ctx, "⚠️ Arrêt du bot...", dm=True)
         await self.bot.close()
 
     @commands.command()
     async def restartbot(self, ctx):
         if not await self.check_owner(ctx): return
-        await self.safe_send(ctx, "⚠️ Redémarrage du bot...")
+        await self.safe_send(ctx, "⚠️ Redémarrage du bot...", dm=True)
         await self.bot.close()
 
     # ------------------ EVAL ------------------
@@ -153,13 +156,10 @@ class Creator(commands.Cog):
             result = eval(code)
             if asyncio.iscoroutine(result):
                 result = await result
-            await self.safe_send(ctx, f"Résultat : {result}")
+            await self.safe_send(ctx, f"Résultat : {result}", dm=True)
         except Exception:
-            await self.safe_send(ctx, f"❌ Erreur :\n```{traceback.format_exc()}```")
+            await self.safe_send(ctx, f"❌ Erreur :\n```{traceback.format_exc()}```", dm=True)
 
 # ------------------ Setup ------------------
 async def setup(bot):
-    if "Creator" in bot.cogs:
-        await bot.reload_extension("delta4")
-    else:
-        await bot.add_cog(Creator(bot))
+    await bot.add_cog(Creator(bot))
