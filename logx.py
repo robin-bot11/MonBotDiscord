@@ -5,13 +5,18 @@ import asyncio
 
 COLOR = 0x6b00cb
 
-class Logs(commands.Cog):
+class Logx(commands.Cog):
+    """Cog pour gérer les logs (messages, salons, vocaux, modérations, rôles)."""
+
     def __init__(self, bot):
         self.bot = bot
+        self.db = getattr(bot, "db", None)  # Assure que la DB est disponible
 
     # -------------------- UTIL --------------------
     async def send_log(self, guild, log_type, embed):
-        channel_id = self.bot.db.get_log_channel(guild.id, log_type)
+        if not self.db:
+            return
+        channel_id = self.db.get_log_channel(guild.id, log_type)
         if not channel_id:
             return
         channel = guild.get_channel(channel_id)
@@ -19,7 +24,7 @@ class Logs(commands.Cog):
             await channel.send(embed=embed)
 
     async def get_audit_user(self, guild, action, target_id=None):
-        """Récupère le user et la raison depuis les audit logs"""
+        """Récupère l'utilisateur et la raison depuis les audit logs"""
         await asyncio.sleep(1)
         async for entry in guild.audit_logs(limit=5, action=action):
             if not target_id or (entry.target and entry.target.id == target_id):
@@ -73,16 +78,13 @@ class Logs(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_update(self, before, after):
-        moderator, _ = await self.get_audit_user(after.guild, discord.AuditLogAction.channel_update, after.id)
-        changes = []
-        if before.name != after.name:
-            changes.append(f"Nom : {before.name} → {after.name}")
-        if not changes:
+        if before.name == after.name:
             return
+        moderator, _ = await self.get_audit_user(after.guild, discord.AuditLogAction.channel_update, after.id)
         embed = discord.Embed(title="✏️ Salon modifié", color=COLOR)
         embed.add_field(name="Salon", value=after.mention, inline=False)
         embed.add_field(name="Modifié par", value=moderator or "Inconnu", inline=False)
-        embed.add_field(name="Changements", value="\n".join(changes), inline=False)
+        embed.add_field(name="Nom", value=f"{before.name} → {after.name}", inline=False)
         await self.send_log(after.guild, "channel", embed)
 
     # -------------------- VOCAL --------------------
@@ -141,4 +143,6 @@ class Logs(commands.Cog):
 
 # -------------------- Setup --------------------
 async def setup(bot):
-    await bot.add_cog(Logs(bot))
+    if "logx" in bot.extensions:
+        await bot.unload_extension("logx")
+    await bot.add_cog(Logx(bot))
