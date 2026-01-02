@@ -1,116 +1,96 @@
-from discord.ext import commands
 import discord
+from discord.ext import commands
 
-OWNER_ID = 1383790178522370058
+EMBED_COLOR = 0x6b00cb
 
-# ---------------- Catégories -> Cogs réels ----------------
-CATEGORY_COGS = {
-    "Modération": ["Moderation", "Modération"],
-    "Logs": ["Logx"],
-    "Giveaway": ["Givax"],
-    "Fun": ["Funx", "Aidx", "Charlie3", "Bécassine"],
-    "Bienvenue": ["JoinBot"],
-    "Partenariat": ["Partenariat"],
-    "Règlement": ["Policy"],
-    "Vérification": ["Snipe"],
-    "Owner": ["Creator"]
+# 🔥 MAPPING COG → CATÉGORIE AFFICHÉE
+COG_CATEGORIES = {
+    "Moderation": "📂 Modération",
+    "Logs": "📂 Logs",
+    "Giveaway": "📂 Giveaway",
+    "Fun": "📂 Fun",
+    "Welcome": "📂 Bienvenue",
+    "Partenariat": "📂 Partenariat",
+    "Reglement": "📂 Règlement",
+    "Verification": "📂 Vérification",
+    "Owner": "📂 Owner"
 }
 
-CATEGORY_COLORS = {
-    "Modération": 0xE74C3C,
-    "Logs": 0xF1C40F,
-    "Giveaway": 0x1ABC9C,
-    "Fun": 0x9B59B6,
-    "Bienvenue": 0x3498DB,
-    "Partenariat": 0xE67E22,
-    "Règlement": 0x95A5A6,
-    "Vérification": 0x2ECC71,
-    "Owner": 0x6b00cb
-}
-
-# ---------------- Select ----------------
-class HelpSelect(discord.ui.Select):
-    def __init__(self, bot, is_owner):
+class CategoryView(discord.ui.View):
+    def __init__(self, bot):
+        super().__init__(timeout=180)
         self.bot = bot
-        self.is_owner = is_owner
 
-        options = [
-            discord.SelectOption(label=cat)
-            for cat in CATEGORY_COGS
-            if cat != "Owner" or is_owner
-        ]
+        for cog_name, label in COG_CATEGORIES.items():
+            self.add_item(CategoryButton(cog_name, label, bot))
 
+
+class CategoryButton(discord.ui.Button):
+    def __init__(self, cog_name, label, bot):
         super().__init__(
-            placeholder="📂 Choisis une catégorie",
-            min_values=1,
-            max_values=1,
-            options=options
+            label=label,
+            style=discord.ButtonStyle.secondary,
+            custom_id=f"help_{cog_name}"
         )
+        self.cog_name = cog_name
+        self.bot = bot
 
     async def callback(self, interaction: discord.Interaction):
-        category = self.values[0]
-
-        if category == "Owner" and interaction.user.id != OWNER_ID:
-            return await interaction.response.send_message("⛔ Accès refusé.", ephemeral=True)
+        cog = self.bot.get_cog(self.cog_name)
 
         embed = discord.Embed(
-            title=f"📂 {category}",
-            color=CATEGORY_COLORS.get(category, 0x6b00cb)
+            title=COG_CATEGORIES.get(self.cog_name, self.cog_name),
+            color=EMBED_COLOR
         )
 
-        found = False
-        allowed_cogs = CATEGORY_COGS[category]
-
-        for command in self.bot.commands:
-            if command.hidden:
-                continue
-
-            if command.cog_name in allowed_cogs:
-                embed.add_field(
-                    name=f"+{command.name}",
-                    value=command.help or "Pas de description",
-                    inline=False
-                )
-                found = True
-
-        if not found:
+        if not cog:
             embed.description = "Aucune commande trouvée pour cette catégorie."
+        else:
+            cmds = cog.get_commands()
+            if not cmds:
+                embed.description = "Aucune commande trouvée pour cette catégorie."
+            else:
+                for cmd in cmds:
+                    desc = cmd.help or "Pas de description"
+                    embed.add_field(
+                        name=f"+{cmd.name}",
+                        value=desc,
+                        inline=False
+                    )
 
-        view = HelpView(self.bot, self.is_owner)
+        view = BackView(self.bot)
         await interaction.response.edit_message(embed=embed, view=view)
 
-# ---------------- View ----------------
-class HelpView(discord.ui.View):
-    def __init__(self, bot, is_owner):
-        super().__init__(timeout=None)
-        self.add_item(HelpSelect(bot, is_owner))
 
-# ---------------- Cog ----------------
-class Aide(commands.Cog):
+class BackView(discord.ui.View):
+    def __init__(self, bot):
+        super().__init__(timeout=180)
+        self.bot = bot
+
+    @discord.ui.button(label="⬅️ Retour", style=discord.ButtonStyle.primary)
+    async def back(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = discord.Embed(
+            title="📖 Menu d'aide",
+            description="Sélectionne une catégorie ci-dessous",
+            color=EMBED_COLOR
+        )
+        await interaction.response.edit_message(embed=embed, view=CategoryView(self.bot))
+
+
+class Help(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="help")
-    async def help_cmd(self, ctx):
+    @commands.command()
+    async def help(self, ctx):
         embed = discord.Embed(
-            title="[ + ] ROBIN • Aide",
-            description=(
-                "📘 Menu d’aide interactif\n\n"
-                "➡️ Sélectionne une catégorie pour voir les commandes\n"
-                "➡️ Préfixe : `+`"
-            ),
-            color=0x6b00cb
+            title="📖 Menu d'aide",
+            description="Sélectionne une catégorie ci-dessous",
+            color=EMBED_COLOR
         )
 
-        try:
-            await ctx.author.send(
-                embed=embed,
-                view=HelpView(self.bot, ctx.author.id == OWNER_ID)
-            )
-            await ctx.reply("📬 Aide envoyée en MP.", mention_author=False)
-        except discord.Forbidden:
-            await ctx.reply("❌ Impossible de t’envoyer un MP.")
+        await ctx.send(embed=embed, view=CategoryView(self.bot))
 
-# ---------------- Setup ----------------
+
 async def setup(bot):
-    await bot.add_cog(Aide(bot))
+    await bot.add_cog(Help(bot))
