@@ -1,130 +1,105 @@
 # help.py
 from discord.ext import commands
 import discord
-from discord.ui import View, Select, Button
+from discord.ui import View, Button, Select
 
 COLOR = 0x6b00cb
-OWNER_ID = 1383790178522370058  # Ton ID
+OWNER_ID = 1383790178522370058
 
-# -------------------- Vue du Menu --------------------
+# -------------------- Menu Select --------------------
 class HelpSelect(Select):
-    def __init__(self, bot, member):
+    def __init__(self, user_id, bot):
+        self.user_id = user_id
         self.bot = bot
-        self.member = member
-        options = []
 
-        # On fixe l'ordre exact des catégories souhaitées
-        categories_order = ["Fun", "Moderation", "Bienvenue / Vérification", "Logs", "Snipe", "Owner"]
-        for name in categories_order:
-            cog = bot.cogs.get(name)
-            if not cog:
-                continue
-            # Cacher Owner si l'utilisateur n'est pas propriétaire
-            if name.lower() == "owner" and member.id != OWNER_ID:
-                continue
-            options.append(discord.SelectOption(label=name, description=cog.__doc__ or "Pas de description"))
+        options = [
+            discord.SelectOption(label="Bienvenue / Vérification", description="Commandes de bienvenue et vérification"),
+            discord.SelectOption(label="Fun", description="Commandes amusantes"),
+            discord.SelectOption(label="Modération", description="Commandes pour gérer le serveur"),
+            discord.SelectOption(label="Logs", description="Commandes liées aux logs"),
+            discord.SelectOption(label="Snipe", description="Commandes pour snipe messages supprimés"),
+        ]
 
-        super().__init__(placeholder="Sélectionnez une catégorie", min_values=1, max_values=1, options=options)
+        super().__init__(placeholder="Sélectionnez une catégorie", min_values=1, max_values=1, options=options, custom_id=f"help_select_{user_id}")
 
     async def callback(self, interaction: discord.Interaction):
-        cog_name = self.values[0]
-        embed = discord.Embed(title=f"📂 {cog_name}", color=COLOR)
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("❌ Ce menu n'est pas pour vous.", ephemeral=True)
 
-        # Commandes par catégorie
-        if cog_name == "Bienvenue / Vérification":
-            cmds = [
-                ("setupverify", "Configurer la vérification avec emoji"),
-                ("setwelcome", "Configurer le welcome simple (texte)"),
-                ("setwelcomeembed", "Configurer le welcome en embed"),
-                ("togglewelcome", "Activer / désactiver le welcome sans supprimer la config")
-            ]
-        elif cog_name == "Owner":
-            cmds = [
-                ("ping", "Pas de description — Protégée / Owner"),
-                ("dm", "Pas de description — Protégée / Owner"),
-                ("backupconfig", "Pas de description — Protégée / Owner"),
-                ("restoreconfig", "Pas de description — Protégée / Owner"),
-                ("resetwarns", "Pas de description — Protégée / Owner"),
-                ("checkrole", "Pas de description — Protégée / Owner"),
-                ("checkchannel", "Pas de description — Protégée / Owner"),
-                ("checkmember", "Pas de description — Protégée / Owner"),
-                ("listbots", "Pas de description — Protégée / Owner"),
-                ("servers", "Pas de description — Protégée / Owner"),
-                ("invite", "Pas de description — Protégée / Owner"),
-                ("shutdownbot", "Pas de description — Protégée / Owner"),
-                ("restartbot", "Pas de description — Protégée / Owner"),
-                ("eval", "Pas de description — Protégée / Owner")
-            ]
-        else:
-            cog = self.bot.cogs.get(cog_name)
-            if not cog:
-                cmds = []
-            else:
-                cmds = []
-                for cmd in cog.get_commands():
-                    desc = cmd.help or "Pas de description"
-                    if cog_name == "Owner" or getattr(cmd, "hidden", False):
-                        if self.member.id == OWNER_ID:
-                            desc += " — Protégée / Owner"
-                        else:
-                            continue
-                    cmds.append((cmd.name, desc))
+        embed = discord.Embed(title="📂 Menu d'aide", color=COLOR)
 
-        if not cmds:
-            embed.description = "Aucune commande trouvée pour cette catégorie."
-        else:
-            for name, desc in cmds:
-                embed.add_field(name=f"+{name}", value=desc, inline=False)
+        if self.values[0] == "Bienvenue / Vérification":
+            embed.description = (
+                "+setupverify — Configurer la vérification avec emoji\n"
+                "+setwelcome — Configurer le welcome simple (texte)\n"
+                "+setwelcomeembed — Configurer le welcome en embed\n"
+                "+togglewelcome — Activer / désactiver le welcome sans supprimer la config"
+            )
+        elif self.values[0] == "Fun":
+            embed.description = (
+                "+papa — Envoie un message hommage au propriétaire du serveur"
+            )
+        elif self.values[0] == "Modération":
+            embed.description = (
+                "+kick <ID> [raison] — Expulse un membre\n"
+                "+ban <ID> [raison] — Bannit un membre\n"
+                "+unban <ID> — Débannit un membre\n"
+                "+mute <ID> [raison] — Mute un membre\n"
+                "+unmute <ID> — Unmute un membre\n"
+                "+timeout <ID> <minutes> — Timeout d'un membre\n"
+                "+giverole <ID> <roleID> — Donne un rôle\n"
+                "+takerole <ID> <roleID> — Retire un rôle\n"
+                "+warn <ID> [raison] — Avertit un membre\n"
+                "+warns <ID> — Liste des warns\n"
+                "+unwarn <ID> <num> — Supprime un warn\n"
+                "+purge <nombre> — Supprime des messages\n"
+                "+purgeall — Supprime tous les messages du salon"
+            )
+        elif self.values[0] == "Logs":
+            embed.description = (
+                "+logchannel — Configurer le salon logs\n"
+                "+logrole — Configurer les logs rôles\n"
+                "+logmod — Configurer les logs modérations\n"
+                "+logvoice — Configurer les logs vocaux\n"
+                "+logmessage — Configurer les logs messages"
+            )
+        elif self.values[0] == "Snipe":
+            embed.description = (
+                "+snipe — Affiche le dernier message supprimé\n"
+                "+esnipe — Affiche le dernier message édité"
+            )
 
+        # Bouton retour
         view = View(timeout=None)
-        view.add_item(HelpSelect(self.bot, self.member))
-        view.add_item(Button(label="🏠 Retour", style=discord.ButtonStyle.gray, custom_id="help_home"))
+        view.add_item(Button(label="Retour", style=discord.ButtonStyle.secondary, custom_id=f"help_back_{self.user_id}"))
         await interaction.response.edit_message(embed=embed, view=view)
 
-# -------------------- Vue Accueil --------------------
-class HelpView(View):
-    def __init__(self, bot, member):
-        super().__init__(timeout=None)
-        self.bot = bot
-        self.member = member
-        self.add_item(HelpSelect(bot, member))
-        self.add_item(Button(label="🏠 Retour", style=discord.ButtonStyle.gray, custom_id="help_home"))
 
-    @discord.ui.button(label="🏠 Retour", style=discord.ButtonStyle.gray, custom_id="help_home")
-    async def back_button(self, button: Button, interaction: discord.Interaction):
-        embed = discord.Embed(
-            title="📖 Menu d'aide",
-            description=(
-                "Tu as fait +help ?\n"
-                "Bienvenue sur le menu d’aide du bot !\n"
-                "Sélectionne une catégorie dans le menu ci-dessous pour voir les commandes disponibles.\n\n"
-                "Certaines commandes sont protégées et réservées au propriétaire."
-            ),
-            color=COLOR
-        )
-        await interaction.response.edit_message(embed=embed, view=HelpView(self.bot, self.member))
-
-# -------------------- Commande Help --------------------
-class HelpCog(commands.Cog):
-    """Menu d'aide du bot"""
-
+# -------------------- Cog Help --------------------
+class Help(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name="help")
     async def help_command(self, ctx):
+        owner_hidden = ctx.author.id != OWNER_ID
+
         embed = discord.Embed(
             title="📖 Menu d'aide",
             description=(
-                "Tu as fait +help ?\n"
+                "Tu as fait +help ?\n\n"
                 "Bienvenue sur le menu d’aide du bot !\n"
                 "Sélectionne une catégorie dans le menu ci-dessous pour voir les commandes disponibles.\n\n"
                 "Certaines commandes sont protégées et réservées au propriétaire."
             ),
             color=COLOR
         )
-        await ctx.send(embed=embed, view=HelpView(self.bot, ctx.author))
+
+        view = View(timeout=None)
+        view.add_item(HelpSelect(ctx.author.id, self.bot))
+
+        await ctx.send(embed=embed, view=view)
 
 # -------------------- Setup --------------------
 async def setup(bot):
-    await bot.add_cog(HelpCog(bot))
+    await bot.add_cog(Help(bot))
