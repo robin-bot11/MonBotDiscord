@@ -2,34 +2,33 @@ import discord
 from discord.ext import commands
 import logging
 import asyncio
-import os
 
 # ---------------- CONFIG ----------------
-TOKEN = "TON_TOKEN_ICI"  # Remplace par ton vrai token
+TOKEN = "TON_TOKEN_ICI"
 PREFIX = "+"
 intents = discord.Intents.all()
 
-# ---------------- BOT ----------------
-# Désactive la commande help par défaut
+# Désactivation de la commande help par défaut
 bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
 
 logging.basicConfig(level=logging.INFO)
 
-# ---------------- LISTE DES COGS ----------------
+# ---------------- COGS ----------------
+# Liste de tous les cogs avec noms valides Railway (sans accents)
 cogs = [
     "fun",
     "giveaway",
-    "help",          # ton help.py personnalisé
-    "lock",
-    "logs",
+    "aide",
+    "verrouiller",
+    "charlie3",        # journaux.py renommé
     "moderation",
-    "owner",
+    "delta4",          # propriétaire.py renommé
     "message_channel",
-    "policy",
+    "politique",
     "snipe",
-    "bienvenue",
-    "partnership",
-    "verification"   # vérification.py sans accent pour éviter problème Railway
+    "partenariat",
+    "alpha1",          # vérification.py renommé
+    "bravo2"           # bienvenue.py renommé
 ]
 
 # ---------------- ÉVÉNEMENTS ----------------
@@ -40,20 +39,16 @@ async def on_ready():
 # ---------------- CHARGEMENT DES COGS ----------------
 async def load_cogs():
     for cog in cogs:
-        # Vérifie si le fichier cog existe
-        file_name = f"{cog}.py"
-        if not os.path.isfile(file_name):
-            logging.warning(f"{file_name} introuvable, passage au suivant")
-            continue
-
-        # Vérifie si le cog est déjà chargé
-        if cog in bot.extensions:
-            logging.warning(f"{cog} déjà chargé, passage au suivant")
-            continue
-
         try:
+            if cog in bot.extensions:
+                logging.warning(f"{cog} déjà chargé, passage au suivant")
+                continue
             await bot.load_extension(cog)
             logging.info(f"{cog} chargé ✅")
+        except ModuleNotFoundError:
+            logging.warning(f"{cog}.py introuvable, passage au suivant")
+        except commands.ExtensionAlreadyLoaded:
+            logging.warning(f"{cog} déjà chargé, passage au suivant")
         except Exception as e:
             logging.error(f"Erreur en chargeant {cog} : {e}")
 
@@ -63,11 +58,8 @@ async def main():
         await load_cogs()
         try:
             await bot.start(TOKEN)
-        except discord.errors.LoginFailure:
-            logging.critical("❌ Jeton incorrect ! Vérifie ton TOKEN dans main.py")
-        except Exception as e:
-            logging.critical(f"❌ Erreur critique lors du démarrage : {e}")
+        except discord.LoginFailure:
+            logging.critical("❌ Jeton Discord invalide ou manquant !")
 
-# ---------------- LANCEMENT ----------------
-if __name__ == "__main__":
-    asyncio.run(main())
+# ---------------- EXEC ----------------
+asyncio.run(main())
