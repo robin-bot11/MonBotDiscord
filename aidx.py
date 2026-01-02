@@ -3,17 +3,12 @@ from discord.ext import commands
 
 EMBED_COLOR = 0x6b00cb
 
-# 🔥 MAPPING COG → CATÉGORIE AFFICHÉE
+# 🔥 MAPPING RÉEL : COG NAME EXACT → CATÉGORIE
 COG_CATEGORIES = {
     "Moderation": "📂 Modération",
-    "Logs": "📂 Logs",
-    "Giveaway": "📂 Giveaway",
-    "Fun": "📂 Fun",
-    "Welcome": "📂 Bienvenue",
     "Partenariat": "📂 Partenariat",
-    "Reglement": "📂 Règlement",
-    "Verification": "📂 Vérification",
-    "Owner": "📂 Owner"
+    "Policy": "📂 Règlement",
+    "Snipe": "📂 Vérification"
 }
 
 class CategoryView(discord.ui.View):
@@ -22,7 +17,9 @@ class CategoryView(discord.ui.View):
         self.bot = bot
 
         for cog_name, label in COG_CATEGORIES.items():
-            self.add_item(CategoryButton(cog_name, label, bot))
+            # N’ajoute le bouton QUE si le cog est chargé
+            if bot.get_cog(cog_name):
+                self.add_item(CategoryButton(cog_name, label, bot))
 
 
 class CategoryButton(discord.ui.Button):
@@ -46,20 +43,21 @@ class CategoryButton(discord.ui.Button):
         if not cog:
             embed.description = "Aucune commande trouvée pour cette catégorie."
         else:
-            cmds = cog.get_commands()
-            if not cmds:
+            commands_list = cog.get_commands()
+            if not commands_list:
                 embed.description = "Aucune commande trouvée pour cette catégorie."
             else:
-                for cmd in cmds:
-                    desc = cmd.help or "Pas de description"
+                for cmd in commands_list:
                     embed.add_field(
                         name=f"+{cmd.name}",
-                        value=desc,
+                        value=cmd.help or "Pas de description",
                         inline=False
                     )
 
-        view = BackView(self.bot)
-        await interaction.response.edit_message(embed=embed, view=view)
+        await interaction.response.edit_message(
+            embed=embed,
+            view=BackView(self.bot)
+        )
 
 
 class BackView(discord.ui.View):
@@ -74,7 +72,10 @@ class BackView(discord.ui.View):
             description="Sélectionne une catégorie ci-dessous",
             color=EMBED_COLOR
         )
-        await interaction.response.edit_message(embed=embed, view=CategoryView(self.bot))
+        await interaction.response.edit_message(
+            embed=embed,
+            view=CategoryView(self.bot)
+        )
 
 
 class Help(commands.Cog):
@@ -88,7 +89,6 @@ class Help(commands.Cog):
             description="Sélectionne une catégorie ci-dessous",
             color=EMBED_COLOR
         )
-
         await ctx.send(embed=embed, view=CategoryView(self.bot))
 
 
