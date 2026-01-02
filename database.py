@@ -17,7 +17,7 @@ class Database:
                     "rules": {},
                     "snipes": {},
                     "partner": {},
-                    "logs": {}  # Logs ajoutés
+                    "logs": {}
                 }, f, indent=4, ensure_ascii=False)
         self.load()
 
@@ -42,22 +42,24 @@ class Database:
             print("✅ Base de données restaurée")
 
     # ------------------ Warns ------------------
-    def add_warn(self, member_id, reason, staff, date):
-        self.data["warns"].setdefault(str(member_id), [])
-        self.data["warns"][str(member_id)].append({
+    def add_warn(self, guild_id, member_id, reason, staff, date):
+        self.data["warns"].setdefault(str(guild_id), {})
+        self.data["warns"][str(guild_id)].setdefault(str(member_id), [])
+        self.data["warns"][str(guild_id)][str(member_id)].append({
             "reason": reason,
             "staff": staff,
             "date": date
         })
         self.save()
 
-    def get_warns(self, member_id):
-        return self.data["warns"].get(str(member_id), [])
+    def get_warns(self, guild_id, member_id):
+        return self.data["warns"].get(str(guild_id), {}).get(str(member_id), [])
 
-    def del_warn(self, member_id, index):
-        if str(member_id) in self.data["warns"]:
-            if 0 <= index < len(self.data["warns"][str(member_id)]):
-                del self.data["warns"][str(member_id)][index]
+    def del_warn(self, guild_id, member_id, index):
+        guild_warns = self.data["warns"].get(str(guild_id), {})
+        if str(member_id) in guild_warns:
+            if 0 <= index < len(guild_warns[str(member_id)]):
+                del guild_warns[str(member_id)][index]
                 self.save()
                 return True
         return False
