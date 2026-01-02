@@ -16,6 +16,19 @@ CATEGORY_STYLES = {
     "Owner": 0x6b00cb
 }
 
+# ---------------- Mapping Catégories → Cogs ----------------
+CATEGORY_COGS = {
+    "Modération": ["modération"],
+    "Logs": ["logx"],
+    "Giveaway": ["givax"],
+    "Fun": ["funx", "aidx", "charlie3", "bécassine"],
+    "Bienvenue": ["joinbot"],
+    "Partenariat": ["partenariat"],
+    "Règlement": ["policy"],
+    "Vérification": ["snipe"],
+    "Owner": ["delta4"]
+}
+
 # ---------------- Exemples + conseils avancés ----------------
 COMMAND_DETAILS = {
     "kick": {
@@ -88,17 +101,21 @@ class HelpSelect(discord.ui.Select):
             return await interaction.response.send_message("⛔ Accès refusé.", ephemeral=True)
 
         found = False
-        for cog_name, cog in bot.cogs.items():
-            if category.lower() in cog_name.lower() or (category == "Owner" and cog_name.lower() == "creator"):
-                for cmd in cog.get_commands():
-                    if not cmd.hidden:
-                        embed.add_field(
-                            name=cmd.name,
-                            value=COMMAND_DETAILS.get(cmd.name, {}).get("tip", "Pas de description"),
-                            inline=False
-                        )
-                        view.add_item(CommandDetailButton(cmd.name))
-                        found = True
+        # ✅ Utilise le mapping catégorie → cogs
+        cogs_for_category = CATEGORY_COGS.get(category, [])
+        for cog_name in cogs_for_category:
+            cog = bot.get_cog(cog_name)
+            if not cog:
+                continue
+            for cmd in cog.get_commands():
+                if not cmd.hidden:
+                    embed.add_field(
+                        name=cmd.name,
+                        value=COMMAND_DETAILS.get(cmd.name, {}).get("tip", "Pas de description"),
+                        inline=False
+                    )
+                    view.add_item(CommandDetailButton(cmd.name))
+                    found = True
 
         if not found:
             embed.description = "Aucune commande trouvée pour cette catégorie."
@@ -110,10 +127,7 @@ class HelpView(discord.ui.View):
     def __init__(self, bot, is_owner: bool):
         super().__init__(timeout=None)
         self.bot = bot
-        categories = [
-            "Modération", "Logs", "Giveaway", "Fun",
-            "Bienvenue", "Partenariat", "Règlement", "Vérification"
-        ]
+        categories = list(CATEGORY_STYLES.keys())
         self.add_item(HelpSelect(categories, is_owner))
 
 # ---------------- Commande Help ----------------
