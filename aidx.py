@@ -9,7 +9,7 @@ COG_INFO = {
     "Fun": {"emoji": "🎉", "priority": 2},
     "Giveaway": {"emoji": "🎁", "priority": 3},
     "Snipe": {"emoji": "👁️", "priority": 4},
-    "Welcome": {"emoji": "✉️", "priority": 5},  # Join + Verification
+    "Welcome": {"emoji": "✉️", "priority": 5},  # Welcome + Verification
     "Message": {"emoji": "💬", "priority": 6},
 }
 
@@ -51,14 +51,9 @@ class HelpView(discord.ui.View):
                 continue
             desc = cmd.help or "Pas de description"
 
-            # Exemples spécifiques pour certaines cogs
+            # ✅ Exemples concrets pour chaque catégorie
             if cog_name == "Snipe":
-                if cmd.name == "purge_snipes_guild":
-                    example = "+purge_snipes_guild"
-                elif cmd.name == "purge_snipes_global":
-                    example = "+purge_snipes_global"
-                else:
-                    example = f"+{cmd.name}"
+                example = f"+{cmd.name}"  # rien de spécial, pas les commandes owner
             elif cog_name == "Message":
                 if cmd.name == "say":
                     example = "+say Bonjour tout le monde !"
