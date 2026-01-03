@@ -1,4 +1,3 @@
-# logx.py
 from discord.ext import commands
 import discord
 import asyncio
@@ -37,20 +36,17 @@ class Logx(commands.Cog):
         return None, None
 
     async def _set_log_channel(self, ctx, log_type, channel: discord.TextChannel):
-        try:
-            if not ctx.author.guild_permissions.administrator:
-                return await ctx.send("⛔ Tu dois être admin pour configurer les logs.")
-            if not self.db:
-                return await ctx.send("❌ La base de données n'est pas configurée.")
-            self.db.set_log_channel(ctx.guild.id, log_type, channel.id)
-            embed = discord.Embed(
-                title=f"✅ {log_type} configuré",
-                description=f"Les logs de type `{log_type}` seront envoyés dans {channel.mention}.",
-                color=SUCCESS_COLOR
-            )
-            await ctx.send(embed=embed)
-        except Exception as e:
-            await ctx.send(f"❌ Une erreur est survenue : `{e}`")
+        if not ctx.author.guild_permissions.administrator:
+            return await ctx.send("⛔ Tu dois être admin pour configurer les logs.")
+        if not self.db:
+            return await ctx.send("❌ La base de données n'est pas configurée.")
+        self.db.set_log_channel(ctx.guild.id, log_type, channel.id)
+        embed = discord.Embed(
+            title=f"✅ {log_type} configuré",
+            description=f"Les logs de type `{log_type}` seront envoyés dans {channel.mention}.",
+            color=SUCCESS_COLOR
+        )
+        await ctx.send(embed=embed)
 
     # -------------------- COMMANDES CONFIG --------------------
     @commands.command(name="log_message")
@@ -101,47 +97,6 @@ class Logx(commands.Cog):
         embed.add_field(name="After", value=after.content or "—", inline=False)
         await self.send_log(before.guild, "log_message", embed)
 
-    # -------------------- LOG CHANNELS --------------------
-    @commands.Cog.listener()
-    async def on_guild_channel_create(self, channel):
-        moderator, _ = await self.get_audit_user(channel.guild, discord.AuditLogAction.channel_create, channel.id)
-        embed = discord.Embed(title="📁 Channel created", color=COLOR)
-        embed.add_field(name="Channel", value=channel.mention, inline=False)
-        embed.add_field(name="Created by", value=moderator or "Unknown", inline=False)
-        await self.send_log(channel.guild, "log_channel", embed)
-
-    @commands.Cog.listener()
-    async def on_guild_channel_delete(self, channel):
-        moderator, _ = await self.get_audit_user(channel.guild, discord.AuditLogAction.channel_delete, channel.id)
-        embed = discord.Embed(title="🗑️ Channel deleted", color=COLOR)
-        embed.add_field(name="Channel", value=channel.name, inline=False)
-        embed.add_field(name="Deleted by", value=moderator or "Unknown", inline=False)
-        await self.send_log(channel.guild, "log_channel", embed)
-
-    @commands.Cog.listener()
-    async def on_guild_channel_update(self, before, after):
-        if before.name == after.name:
-            return
-        moderator, _ = await self.get_audit_user(after.guild, discord.AuditLogAction.channel_update, after.id)
-        embed = discord.Embed(title="✏️ Channel updated", color=COLOR)
-        embed.add_field(name="Channel", value=after.mention, inline=False)
-        embed.add_field(name="Updated by", value=moderator or "Unknown", inline=False)
-        embed.add_field(name="Name", value=f"{before.name} → {after.name}", inline=False)
-        await self.send_log(after.guild, "log_channel", embed)
-
-    # -------------------- LOG VOICE --------------------
-    @commands.Cog.listener()
-    async def on_voice_state_update(self, member, before, after):
-        embed = None
-        if not before.channel and after.channel:
-            embed = discord.Embed(title="🔊 Voice joined", description=f"{member.mention} → {after.channel.mention}", color=COLOR)
-        elif before.channel and not after.channel:
-            embed = discord.Embed(title="🔇 Voice left", description=f"{member.mention} ← {before.channel.mention}", color=COLOR)
-        elif before.channel and after.channel and before.channel != after.channel:
-            embed = discord.Embed(title="🔁 Voice moved", description=f"{member.mention}\n{before.channel.name} → {after.channel.name}", color=COLOR)
-        if embed:
-            await self.send_log(member.guild, "log_vocal", embed)
-
     # -------------------- LOG MOD --------------------
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
@@ -163,13 +118,15 @@ class Logx(commands.Cog):
 
     # -------------------- WARN / MUTE / DEMUTE --------------------
     async def log_warn(self, guild, member, moderator, reason):
+        """Logger un warn"""
         embed = discord.Embed(title="⚠️ Member warned", color=COLOR)
         embed.add_field(name="Member", value=member, inline=False)
         embed.add_field(name="Moderator", value=moderator, inline=False)
         embed.add_field(name="Reason", value=reason, inline=False)
         await self.send_log(guild, "log_mod", embed)
 
-    async def log_mute(self, guild, member, moderator, reason):
+    async def log_mute(self, guild, member, moderator, reason=None):
+        """Logger un mute"""
         embed = discord.Embed(title="🔇 Member muted", color=COLOR)
         embed.add_field(name="Member", value=member, inline=False)
         embed.add_field(name="Moderator", value=moderator, inline=False)
@@ -177,6 +134,7 @@ class Logx(commands.Cog):
         await self.send_log(guild, "log_mod", embed)
 
     async def log_demute(self, guild, member, moderator):
+        """Logger un demute"""
         embed = discord.Embed(title="🔊 Member unmuted", color=COLOR)
         embed.add_field(name="Member", value=member, inline=False)
         embed.add_field(name="Moderator", value=moderator, inline=False)
