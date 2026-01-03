@@ -3,21 +3,27 @@ import discord
 
 COLOR = 0x6b00cb
 
+# ---------------- CATEGORIES ----------------
 COG_INFO = {
     "Moderation": {"emoji": "🔨", "priority": 1},
-    "Logx": {"emoji": "📜", "priority": 2},
-    "MessageChannel": {"emoji": "✉️", "priority": 3},
-    "Snipe": {"emoji": "🔍", "priority": 4},
+    "Fun": {"emoji": "🎉", "priority": 2},
+    "Giveaway": {"emoji": "🎁", "priority": 3},
+    "Welcome": {"emoji": "✉️", "priority": 4},
+    "Message": {"emoji": "💬", "priority": 5},
+    "Partenariat": {"emoji": "🤝", "priority": 6},
+    "Reglement": {"emoji": "📜", "priority": 7},  # anciennement Policy
+    "Snipe": {"emoji": "👁️", "priority": 8},
 }
 
 HOME_TEXT = (
-    "💜 **Bienvenue dans le menu d'aide de MonBotDiscord !**\n\n"
-    "Voici un aperçu de ce que chaque catégorie propose.\n\n"
-    "**Moderation** : `+warn {user} {raison}` | `+kick {user}`\n"
-    "**Message** : `+setwelcome {channel} {message}`\n"
-    "**Snipe** : `+snipe`\n"
-    "**Logs** : configuration automatique\n\n"
-    "📌 Utilise le menu ci-dessous pour choisir une catégorie."
+    "[ + ] 𝐑𝐨𝐛𝐢𝐍\n\n"
+    "**Tu as fait +help ?**\n\n"
+    "Utilise le menu de sélection ci-dessous pour choisir une catégorie.\n\n"
+    "🔎 Chaque commande est présentée avec :\n"
+    "• une description claire\n"
+    "• les variables {} à utiliser\n"
+    "• un exemple concret\n\n"
+    "Certaines commandes sont réservées au propriétaire"
 )
 
 # ---------------- VIEW ----------------
@@ -33,6 +39,9 @@ class HelpView(discord.ui.View):
     async def select_callback(self, interaction: discord.Interaction, select: discord.ui.Select):
         cog_name = select.values[0]
         cog = self.bot.get_cog(cog_name)
+        if not cog:
+            await interaction.response.send_message("⚠️ Cog introuvable.", ephemeral=True)
+            return
 
         embed = discord.Embed(
             title=f"{COG_INFO[cog_name]['emoji']} {cog_name}",
@@ -40,10 +49,24 @@ class HelpView(discord.ui.View):
         )
 
         for cmd in cog.get_commands():
+            if cmd.hidden or cmd.enabled is False:
+                continue
             desc = cmd.help or "Pas de description"
+
+            # ✅ Exemple concret pour Reglement
+            if cog_name == "Reglement":
+                if cmd.name == "reglement":
+                    example = "+reglement"
+                elif cmd.name == "showreglement":
+                    example = "+showreglement"
+                else:
+                    example = f"+{cmd.name}"
+            else:
+                example = cmd.usage or f"+{cmd.name}"
+
             embed.add_field(
                 name=f"+{cmd.name}",
-                value=f"{desc}\n**Exemple :** `{cmd.usage or 'Aucun exemple'}`",
+                value=f"{desc}\n**Exemple :** `{example}`",
                 inline=False
             )
 
@@ -52,7 +75,7 @@ class HelpView(discord.ui.View):
     @discord.ui.button(label="🏠 Accueil", style=discord.ButtonStyle.secondary)
     async def home(self, interaction: discord.Interaction, button: discord.ui.Button):
         embed = discord.Embed(
-            title="💜 Aide de MonBotDiscord",
+            title="[ + ] 𝐑𝐨𝐛𝐢𝐍",  # TITRE CORRIGÉ
             description=HOME_TEXT,
             color=COLOR
         )
@@ -60,7 +83,7 @@ class HelpView(discord.ui.View):
 
 # ---------------- COG ----------------
 class Help(commands.Cog):
-    """Help interactif avec menu, accueil et exemples"""
+    """Help interactif complet et sécurisé"""
 
     def __init__(self, bot):
         self.bot = bot
@@ -68,14 +91,14 @@ class Help(commands.Cog):
     @commands.command(name="help")
     async def help_command(self, ctx):
         embed = discord.Embed(
-            title="💜 Aide de MonBotDiscord",
+            title="[ + ] 𝐑𝐨𝐛𝐢𝐍",  # TITRE CORRIGÉ
             description=HOME_TEXT,
             color=COLOR
         )
 
         view = HelpView(self.bot)
 
-        # Génération dynamique du menu
+        # Génération dynamique du menu déroulant avec toutes les cogs
         options = []
         for cog_name in sorted(COG_INFO, key=lambda x: COG_INFO[x]["priority"]):
             cog = self.bot.get_cog(cog_name)
