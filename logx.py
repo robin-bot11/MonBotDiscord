@@ -28,23 +28,29 @@ class Logx(commands.Cog):
     async def get_audit_user(self, guild, action, target_id=None):
         """Récupère le modérateur et la raison depuis les audit logs"""
         await asyncio.sleep(1)
-        async for entry in guild.audit_logs(limit=5, action=action):
-            if not target_id or (entry.target and entry.target.id == target_id):
-                return entry.user, entry.reason
+        try:
+            async for entry in guild.audit_logs(limit=5, action=action):
+                if not target_id or (entry.target and entry.target.id == target_id):
+                    return entry.user, entry.reason
+        except Exception:
+            return None, None
         return None, None
 
     async def _set_log_channel(self, ctx, log_type, channel: discord.TextChannel):
-        if not ctx.author.guild_permissions.administrator:
-            return await ctx.send("⛔ Tu dois être admin pour configurer les logs.")
-        if not self.db:
-            return await ctx.send("❌ DB non trouvée.")
-        self.db.set_log_channel(ctx.guild.id, log_type, channel.id)
-        embed = discord.Embed(
-            title=f"✅ {log_type} configuré",
-            description=f"Les logs de type `{log_type}` seront envoyés dans {channel.mention}.",
-            color=SUCCESS_COLOR
-        )
-        await ctx.send(embed=embed)
+        try:
+            if not ctx.author.guild_permissions.administrator:
+                return await ctx.send("⛔ Tu dois être admin pour configurer les logs.")
+            if not self.db:
+                return await ctx.send("❌ La base de données n'est pas configurée.")
+            self.db.set_log_channel(ctx.guild.id, log_type, channel.id)
+            embed = discord.Embed(
+                title=f"✅ {log_type} configuré",
+                description=f"Les logs de type `{log_type}` seront envoyés dans {channel.mention}.",
+                color=SUCCESS_COLOR
+            )
+            await ctx.send(embed=embed)
+        except Exception as e:
+            await ctx.send(f"❌ Une erreur est survenue : `{e}`")
 
     # -------------------- COMMANDES CONFIG --------------------
     @commands.command(name="log_message")
