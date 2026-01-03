@@ -50,13 +50,13 @@ class Owner(commands.Cog):
         return True
 
     # ---------------- COMMANDES DE BASE ----------------
-    @commands.command(help="Ping Owner du bot | Exemple : +pingowner")
-    async def pingowner(self, ctx):
+    @commands.command(name="owner_ping", help="Ping du bot (Owner) | Exemple : +owner_ping")
+    async def owner_ping(self, ctx):
         if not await self.check_owner(ctx): return
-        await self.safe_send(ctx, "✅ Le bot est en ligne (Owner Ping).")
+        await self.safe_send(ctx, "✅ Le bot est en ligne.")
 
-    @commands.command(help="Envoyer un DM [ID obligatoire] | Exemple : +dm 123456789012345678 Salut !")
-    async def dm(self, ctx, user_id: int, *, message):
+    @commands.command(name="owner_dm", help="Envoyer un DM [ID obligatoire] (Owner) | Exemple : +owner_dm 123456789012345678 Salut !")
+    async def owner_dm(self, ctx, user_id: int, *, message):
         if not await self.check_owner(ctx): return
         try:
             user = await self.bot.fetch_user(user_id)
@@ -66,21 +66,21 @@ class Owner(commands.Cog):
             await self.safe_send(ctx, "❌ Impossible d'envoyer le message.")
 
     # ---------------- CONFIG ----------------
-    @commands.command(help="Sauvegarder la config | Exemple : +backupconfig")
-    async def backupconfig(self, ctx):
+    @commands.command(name="owner_backupconfig", help="Sauvegarder la config | Exemple : +owner_backupconfig")
+    async def owner_backupconfig(self, ctx):
         if not await self.check_owner(ctx): return
         self.bot.db.backup()
         await self.safe_send(ctx, "💾 Configuration sauvegardée.")
 
-    @commands.command(help="Restaurer la config | Exemple : +restoreconfig")
-    async def restoreconfig(self, ctx):
+    @commands.command(name="owner_restoreconfig", help="Restaurer la config | Exemple : +owner_restoreconfig")
+    async def owner_restoreconfig(self, ctx):
         if not await self.check_owner(ctx): return
         self.bot.db.restore()
         await self.safe_send(ctx, "💾 Configuration restaurée.")
 
     # ---------------- SNIPES OWNER ----------------
-    @commands.command(help="Purge un snipe salon ou global [ID salon optionnel] | Exemple : +snipe_clear 123456789012345678 ou +snipe_clear")
-    async def snipe_clear(self, ctx, channel_id: int = None):
+    @commands.command(name="owner_snipe_clear", help="Purge un snipe salon ou global [ID salon optionnel] | Exemple : +owner_snipe_clear 123456789012345678 ou +owner_snipe_clear")
+    async def owner_snipe_clear(self, ctx, channel_id: int = None):
         if not await self.check_owner(ctx): return
         if channel_id:
             removed = self.bot.db.data.get("snipes", {}).pop(str(channel_id), None)
@@ -91,8 +91,8 @@ class Owner(commands.Cog):
             self.bot.db.save()
             await self.safe_send(ctx, "🧹 Tous les snipes ont été purgés globalement.")
 
-    @commands.command(help="Supprime les snipes expirés >24h | Exemple : +snipe_expire")
-    async def snipe_expire(self, ctx):
+    @commands.command(name="owner_snipe_expire", help="Supprime les snipes expirés >24h | Exemple : +owner_snipe_expire")
+    async def owner_snipe_expire(self, ctx):
         if not await self.check_owner(ctx): return
         snipes = self.bot.db.data.get("snipes", {})
         now = int(time.time())
@@ -105,21 +105,21 @@ class Owner(commands.Cog):
         await self.safe_send(ctx, f"🕑 Snipes expirés supprimés : {removed}")
 
     # ---------------- SYSTEM ----------------
-    @commands.command(help="Arrêter le bot | Exemple : +shutdownbot")
-    async def shutdownbot(self, ctx):
+    @commands.command(name="owner_shutdown", help="Arrêter le bot | Exemple : +owner_shutdown")
+    async def owner_shutdown(self, ctx):
         if not await self.check_owner(ctx): return
         await self.safe_send(ctx, "⚠️ Arrêt du bot...", dm=True)
         await self.bot.close()
 
-    @commands.command(help="Redémarrer le bot | Exemple : +restartbot")
-    async def restartbot(self, ctx):
+    @commands.command(name="owner_restart", help="Redémarrer le bot | Exemple : +owner_restart")
+    async def owner_restart(self, ctx):
         if not await self.check_owner(ctx): return
         await self.safe_send(ctx, "⚠️ Redémarrage du bot...", dm=True)
         await self.bot.close()
 
     # ---------------- EVAL ----------------
-    @commands.command(help="Évaluer du code Python | Exemple : +eval 1+1")
-    async def eval(self, ctx, *, code):
+    @commands.command(name="owner_eval", help="Évaluer du code Python | Exemple : +owner_eval 1+1")
+    async def owner_eval(self, ctx, *, code):
         if not await self.check_owner(ctx): return
         env = {"bot": self.bot, "ctx": ctx, "discord": discord}
         try:
@@ -131,20 +131,20 @@ class Owner(commands.Cog):
             await self.safe_send(ctx, f"❌ Erreur :\n```{traceback.format_exc()}```", dm=True)
 
     # ---------------- AUTRES COMMANDES ----------------
-    @commands.command(help="Verrouiller le bot | Exemple : +lockbot")
-    async def lockbot(self, ctx):
+    @commands.command(name="owner_lock", help="Verrouiller le bot | Exemple : +owner_lock")
+    async def owner_lock(self, ctx):
         if not await self.check_owner(ctx): return
         self.locked = True
         await self.safe_send(ctx, "🔒 Le bot est maintenant verrouillé.")
 
-    @commands.command(help="Déverrouiller le bot | Exemple : +unlockbot")
-    async def unlockbot(self, ctx):
+    @commands.command(name="owner_unlock", help="Déverrouiller le bot | Exemple : +owner_unlock")
+    async def owner_unlock(self, ctx):
         if not await self.check_owner(ctx): return
         self.locked = False
         await self.safe_send(ctx, "🔓 Le bot est maintenant déverrouillé.")
 
-    @commands.command(help="Changer le statut du bot | Exemple : +status online Joueur de test")
-    async def status(self, ctx, type: str, *, text: str):
+    @commands.command(name="owner_status", help="Changer le statut du bot | Exemple : +owner_status online Joueur de test")
+    async def owner_status(self, ctx, type: str, *, text: str):
         if not await self.check_owner(ctx): return
         types = {"online": discord.Status.online, "dnd": discord.Status.dnd,
                  "idle": discord.Status.idle, "invisible": discord.Status.invisible}
@@ -154,8 +154,8 @@ class Owner(commands.Cog):
         await self.bot.change_presence(activity=discord.Game(name=text), status=status)
         await self.safe_send(ctx, f"✅ Statut changé en {type} | {text}")
 
-    @commands.command(help="Recharger un cog [Nom du cog] | Exemple : +reload Snipe")
-    async def reload(self, ctx, cog: str):
+    @commands.command(name="owner_reload", help="Recharger un cog [Nom du cog] | Exemple : +owner_reload Snipe")
+    async def owner_reload(self, ctx, cog: str):
         if not await self.check_owner(ctx): return
         try:
             await self.bot.reload_extension(f"cogs.{cog}")
@@ -163,8 +163,8 @@ class Owner(commands.Cog):
         except Exception as e:
             await self.safe_send(ctx, f"❌ Erreur : {e}")
 
-    @commands.command(help="Recharger tous les cogs | Exemple : +reloadall")
-    async def reloadall(self, ctx):
+    @commands.command(name="owner_reloadall", help="Recharger tous les cogs | Exemple : +owner_reloadall")
+    async def owner_reloadall(self, ctx):
         if not await self.check_owner(ctx): return
         reloaded = []
         for ext in list(self.bot.cogs.keys()):
@@ -175,25 +175,25 @@ class Owner(commands.Cog):
                 continue
         await self.safe_send(ctx, f"✅ Cogs rechargés : {', '.join(reloaded)}")
 
-    @commands.command(help="Infos du bot | Exemple : +botinfo")
-    async def botinfo(self, ctx):
+    @commands.command(name="owner_botinfo", help="Infos du bot | Exemple : +owner_botinfo")
+    async def owner_botinfo(self, ctx):
         if not await self.check_owner(ctx): return
         mem = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024
         await self.safe_send(ctx, f"Bot : {self.bot.user}\nServeurs : {len(self.bot.guilds)}\nLatence : {round(self.bot.latency*1000)}ms\nMémoire : {mem:.2f}MB")
 
-    @commands.command(help="Latence du bot | Exemple : +latency")
-    async def latency(self, ctx):
+    @commands.command(name="owner_latency", help="Latence du bot | Exemple : +owner_latency")
+    async def owner_latency(self, ctx):
         if not await self.check_owner(ctx): return
         await self.safe_send(ctx, f"Latence : {round(self.bot.latency*1000)}ms")
 
-    @commands.command(help="Mémoire du bot | Exemple : +memory")
-    async def memory(self, ctx):
+    @commands.command(name="owner_memory", help="Mémoire du bot | Exemple : +owner_memory")
+    async def owner_memory(self, ctx):
         if not await self.check_owner(ctx): return
         mem = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024
         await self.safe_send(ctx, f"Utilisation mémoire : {mem:.2f}MB")
 
-    @commands.command(help="Quitter un serveur [ID obligatoire] | Exemple : +leaveserver 123456789012345678")
-    async def leaveserver(self, ctx, guild_id: int):
+    @commands.command(name="owner_leaveserver", help="Quitter un serveur [ID obligatoire] | Exemple : +owner_leaveserver 123456789012345678")
+    async def owner_leaveserver(self, ctx, guild_id: int):
         if not await self.check_owner(ctx): return
         guild = self.bot.get_guild(guild_id)
         if guild:
