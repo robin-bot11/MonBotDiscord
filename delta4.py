@@ -2,6 +2,10 @@ from discord.ext import commands
 import discord
 import asyncio
 import traceback
+import os
+import psutil
+import platform
+from datetime import datetime
 
 OWNER_ID = 1383790178522370058
 COLOR = 0x6b00cb
@@ -11,6 +15,7 @@ class Creator(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.locked = False  # lockbot / unlockbot
 
     # ------------------ UTIL ------------------
     def is_owner(self, ctx):
@@ -31,19 +36,55 @@ class Creator(commands.Cog):
         except discord.Forbidden:
             pass
 
-    # ------------------ COMMANDES DE BASE ------------------
+    # ------------------ GLOBAL CHECK ------------------
+    @commands.Cog.listener()
+    async def on_command(self, ctx):
+        if self.locked and ctx.author.id != OWNER_ID:
+            await ctx.send("🔒 Le bot est actuellement verrouillé.")
+            ctx.command.reset_cooldown(ctx)
+            return False
+
+    # ------------------ BASE ------------------
     @commands.command()
     async def ping(self, ctx):
         if not await self.check_owner(ctx): return
-        await self.safe_send(ctx, "✅ Le bot est en ligne.")
+        await self.safe_send(ctx, "✅ Le bot répond correctement.")
 
+    @commands.command()
+    async def latency(self, ctx):
+        if not await self.check_owner(ctx): return
+        await self.safe_send(ctx, f"🏓 Latence : `{round(self.bot.latency * 1000)}ms`")
+
+    # ------------------ STATUS ------------------
+    @commands.command()
+    async def status(self, ctx, type: str, *, text: str):
+        if not await self.check_owner(ctx): return
+
+        types = {
+            "playing": discord.ActivityType.playing,
+            "watching": discord.ActivityType.watching,
+            "listening": discord.ActivityType.listening,
+            "competing": discord.ActivityType.competing
+        }
+
+        if type.lower() not in types:
+            return await self.safe_send(
+                ctx,
+                "❌ Type invalide.\nTypes : playing / watching / listening / competing"
+            )
+
+        activity = discord.Activity(type=types[type.lower()], name=text)
+        await self.bot.change_presence(activity=activity)
+        await self.safe_send(ctx, f"✅ Statut mis à jour : **{type} {text}**")
+
+    # ------------------ DM ------------------
     @commands.command()
     async def dm(self, ctx, user_id: int, *, message):
         if not await self.check_owner(ctx): return
         try:
             user = await self.bot.fetch_user(user_id)
             await user.send(message)
-            await self.safe_send(ctx, f"Message envoyé à {user}.")
+            await self.safe_send(ctx, f"📨 Message envoyé à {user}.")
         except discord.Forbidden:
             await self.safe_send(ctx, "❌ Impossible d'envoyer le message.")
 
@@ -66,27 +107,25 @@ class Creator(commands.Cog):
         guild_id = str(ctx.guild.id)
         self.bot.db.data.get("warns", {}).get(guild_id, {}).pop(str(member_id), None)
         self.bot.db.save()
-        await self.safe_send(ctx, f"⚠️ Warns supprimés pour {member_id} sur ce serveur.")
+        await self.safe_send(ctx, f"⚠️ Warns supprimés pour {member_id}.")
 
     # ------------------ CHECK ------------------
     @commands.command()
     async def checkrole(self, ctx, role_id: int):
         if not await self.check_owner(ctx): return
         role = ctx.guild.get_role(role_id)
-        if role:
-            perms = [name for name, val in role.permissions if val]
-            await self.safe_send(ctx, f"Rôle {role.name} : {perms}")
-        else:
-            await self.safe_send(ctx, "❌ Rôle introuvable.")
+        if not role:
+            return await self.safe_send(ctx, "❌ Rôle introuvable.")
+        perms = [p for p, v in role.permissions if v]
+        await self.safe_send(ctx, f"🎭 **{role.name}**\nPermissions : {', '.join(perms)}")
 
     @commands.command()
     async def checkchannel(self, ctx, channel_id: int):
         if not await self.check_owner(ctx): return
         channel = ctx.guild.get_channel(channel_id)
-        if channel:
-            await self.safe_send(ctx, f"Salon {channel.name} | Type={channel.type}")
-        else:
-            await self.safe_send(ctx, "❌ Salon introuvable.")
+        if not channel:
+            return await self.safe_send(ctx, "❌ Salon introuvable.")
+        await self.safe_send(ctx, f"📁 {channel.name} | Type : {channel.type}")
 
     @commands.command()
     async def checkmember(self, ctx, member_id: int):
@@ -95,56 +134,62 @@ class Creator(commands.Cog):
         if not member:
             return await self.safe_send(ctx, "❌ Membre introuvable.")
         roles = [r.name for r in member.roles if r.name != "@everyone"]
-        await self.safe_send(ctx, f"Membre {member} | Rôles={roles}")
+        await self.safe_send(ctx, f"👤 {member}\nRôles : {roles}")
 
     # ------------------ LISTES ------------------
     @commands.command()
     async def listbots(self, ctx):
         if not await self.check_owner(ctx): return
         bots = [m.name for m in ctx.guild.members if m.bot]
-        await self.safe_send(ctx, f"Bots : {', '.join(bots)}")
+        await self.safe_send(ctx, f"🤖 Bots : {', '.join(bots)}")
 
     @commands.command()
-    async def servers(self, ctx, page: int = 1):
+    async def servers(self, ctx):
         if not await self.check_owner(ctx): return
-        per_page = 5
-        guilds = self.bot.guilds
-        start = (page - 1) * per_page
-        msg = "\n".join(f"{g.name} | {g.id}" for g in guilds[start:start+per_page])
+        msg = "\n".join(f"{g.name} | {g.id}" for g in self.bot.guilds)
         await self.safe_send(ctx, msg, dm=True)
 
-    # ------------------ INVITE ------------------
+    # ------------------ BOT INFO ------------------
     @commands.command()
-    async def invite(self, ctx, guild_id: int):
+    async def botinfo(self, ctx):
+        if not await self.check_owner(ctx): return
+        embed = discord.Embed(title="🤖 Bot Info", color=COLOR)
+        embed.add_field(name="Serveurs", value=len(self.bot.guilds))
+        embed.add_field(name="Utilisateurs", value=len(self.bot.users))
+        embed.add_field(name="Python", value=platform.python_version())
+        embed.add_field(name="Discord.py", value=discord.__version__)
+        embed.timestamp = datetime.utcnow()
+        await ctx.send(embed=embed)
+
+    @commands.command()
+    async def memory(self, ctx):
+        if not await self.check_owner(ctx): return
+        process = psutil.Process(os.getpid())
+        mem = process.memory_info().rss / 1024 / 1024
+        await self.safe_send(ctx, f"🧠 Mémoire utilisée : `{mem:.2f} MB`")
+
+    # ------------------ SERVEUR ------------------
+    @commands.command()
+    async def leaveserver(self, ctx, guild_id: int):
         if not await self.check_owner(ctx): return
         guild = self.bot.get_guild(guild_id)
         if not guild:
-            return await self.safe_send(ctx, "❌ Serveur introuvable.", dm=True)
+            return await self.safe_send(ctx, "❌ Serveur introuvable.")
+        await guild.leave()
+        await self.safe_send(ctx, f"🚪 Bot retiré de **{guild.name}**")
 
-        bot_member = guild.members.me
-        channel = next(
-            (c for c in guild.text_channels if c.permissions_for(bot_member).create_instant_invite),
-            None
-        )
-
-        if not channel:
-            return await self.safe_send(ctx, "❌ Aucun salon valide.", dm=True)
-
-        invite = await channel.create_invite(max_age=3600, max_uses=1)
-        await self.safe_send(ctx, f"Invitation : {invite}", dm=True)
-
-    # ------------------ SYSTEM ------------------
+    # ------------------ LOCK ------------------
     @commands.command()
-    async def shutdownbot(self, ctx):
+    async def lockbot(self, ctx):
         if not await self.check_owner(ctx): return
-        await self.safe_send(ctx, "Arrêt du bot.", dm=True)
-        await self.bot.close()
+        self.locked = True
+        await self.safe_send(ctx, "🔒 Bot verrouillé.")
 
     @commands.command()
-    async def restartbot(self, ctx):
+    async def unlockbot(self, ctx):
         if not await self.check_owner(ctx): return
-        await self.safe_send(ctx, "Redémarrage du bot.", dm=True)
-        await self.bot.close()
+        self.locked = False
+        await self.safe_send(ctx, "🔓 Bot déverrouillé.")
 
     # ------------------ EVAL ------------------
     @commands.command()
@@ -159,5 +204,6 @@ class Creator(commands.Cog):
         except Exception:
             await self.safe_send(ctx, f"❌ Erreur :\n```{traceback.format_exc()}```", dm=True)
 
+# ------------------ SETUP ------------------
 async def setup(bot):
     await bot.add_cog(Creator(bot))
