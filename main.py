@@ -34,12 +34,13 @@ cogs = [
     "moderation",
     "delta4",
     "message_channel",
-    "policy",
+    "politique",
     "snipe",
-    "partnership",
+    "partenariat",
     "joinbot",
     "logx",
-    "help"  # toujours en dernier pour que le help fonctionne
+    "help",
+    "papa"  # Owner commands, toujours en dernier
 ]
 
 # ---------------- UTIL ----------------
@@ -79,7 +80,7 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.MissingRequiredArgument):
         await ctx.send(f"❌ Argument manquant : {error.param}")
     elif isinstance(error, commands.CommandNotFound):
-        pass
+        pass  # ignore
     else:
         logging.error(f"❌ Erreur inattendue : {error}")
         await ctx.send(f"❌ Une erreur est survenue : {error}")
