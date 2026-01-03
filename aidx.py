@@ -8,11 +8,9 @@ COG_INFO = {
     "Moderation": {"emoji": "🔨", "priority": 1},
     "Fun": {"emoji": "🎉", "priority": 2},
     "Giveaway": {"emoji": "🎁", "priority": 3},
-    "Welcome": {"emoji": "✉️", "priority": 4},
-    "Message": {"emoji": "💬", "priority": 5},
-    "Partenariat": {"emoji": "🤝", "priority": 6},
-    "Reglement": {"emoji": "📜", "priority": 7},  # anciennement Policy
-    "Snipe": {"emoji": "👁️", "priority": 8},
+    "Snipe": {"emoji": "👁️", "priority": 4},
+    "Welcome": {"emoji": "✉️", "priority": 5},  # Join + Verification
+    "Message": {"emoji": "💬", "priority": 6},
 }
 
 HOME_TEXT = (
@@ -53,12 +51,34 @@ class HelpView(discord.ui.View):
                 continue
             desc = cmd.help or "Pas de description"
 
-            # ✅ Exemple concret pour Reglement
-            if cog_name == "Reglement":
-                if cmd.name == "reglement":
-                    example = "+reglement"
-                elif cmd.name == "showreglement":
-                    example = "+showreglement"
+            # Exemples spécifiques pour certaines cogs
+            if cog_name == "Snipe":
+                if cmd.name == "purge_snipes_guild":
+                    example = "+purge_snipes_guild"
+                elif cmd.name == "purge_snipes_global":
+                    example = "+purge_snipes_global"
+                else:
+                    example = f"+{cmd.name}"
+            elif cog_name == "Message":
+                if cmd.name == "say":
+                    example = "+say Bonjour tout le monde !"
+                elif cmd.name == "sayembed":
+                    example = "+sayembed Salut en embed"
+                elif cmd.name == "createchannel":
+                    example = "+createchannel salon-text text"
+                elif cmd.name == "deletechannel":
+                    example = "+deletechannel salon-text"
+                else:
+                    example = f"+{cmd.name}"
+            elif cog_name == "Welcome":
+                if cmd.name == "setwelcome":
+                    example = "+setwelcome #général Bienvenue {user} !"
+                elif cmd.name == "setwelcomeembed":
+                    example = "+setwelcomeembed #général Titre Description https://thumb.jpg https://image.jpg"
+                elif cmd.name == "setupverify":
+                    example = "+setupverify"
+                elif cmd.name == "togglewelcome":
+                    example = "+togglewelcome"
                 else:
                     example = f"+{cmd.name}"
             else:
@@ -75,7 +95,7 @@ class HelpView(discord.ui.View):
     @discord.ui.button(label="🏠 Accueil", style=discord.ButtonStyle.secondary)
     async def home(self, interaction: discord.Interaction, button: discord.ui.Button):
         embed = discord.Embed(
-            title="[ + ] 𝐑𝐨𝐛𝐢𝐍",  # TITRE CORRIGÉ
+            title="[ + ] 𝐑𝐨𝐛𝐢𝐍",
             description=HOME_TEXT,
             color=COLOR
         )
@@ -91,7 +111,7 @@ class Help(commands.Cog):
     @commands.command(name="help")
     async def help_command(self, ctx):
         embed = discord.Embed(
-            title="[ + ] 𝐑𝐨𝐛𝐢𝐍",  # TITRE CORRIGÉ
+            title="[ + ] 𝐑𝐨𝐛𝐢𝐍",
             description=HOME_TEXT,
             color=COLOR
         )
