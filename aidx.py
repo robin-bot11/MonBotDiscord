@@ -1,7 +1,7 @@
 # help.py
 import discord
 from discord.ext import commands
-from discord.ui import View, Select
+from discord.ui import View, Select, Button
 
 COLOR = 0x6b00cb
 
@@ -52,7 +52,13 @@ class HelpDropdown(Select):
                 "+setwelcomeembed <#salon> <title> <description> [thumbnail] [image] — Configurer le welcome en embed (Admin)",
                 "+togglewelcome — Activer / désactiver le welcome (Admin)"
             ],
-            "Logs": ["⚠️ Pas de commandes disponibles pour ce cog."],
+            "Logs": [
+                "on_message_delete / on_message_edit — Logs des messages supprimés ou édités",
+                "on_guild_channel_create / delete / update — Logs des salons",
+                "on_voice_state_update — Logs des vocaux (join / leave / move)",
+                "on_member_ban / on_member_remove — Logs des actions de modération",
+                "on_member_update — Logs des rôles ajoutés / retirés"
+            ],
             "MessageChannel": [
                 "+say <message> — Envoyer un message simple (Admin)",
                 "+sayembed <message> — Envoyer un message en embed (Admin)",
@@ -80,13 +86,37 @@ class HelpDropdown(Select):
     async def callback(self, interaction: discord.Interaction):
         cog_name = self.values[0]
         commands_list = self.cog_list.get(cog_name, ["⚠️ Pas de commandes disponibles pour ce cog."])
-        embed = discord.Embed(title=f"{cog_name}", description="\n".join(commands_list), color=COLOR)
-        await interaction.response.edit_message(embed=embed, view=self.view)
+        embed = discord.Embed(
+            title=f"{cog_name}",
+            description="\n".join(commands_list),
+            color=COLOR
+        )
+        # Ajoute le bouton "Accueil"
+        view = HomeButtonView(self.bot)
+        view.add_item(self)
+        await interaction.response.edit_message(embed=embed, view=view)
+
+
+class HomeButtonView(View):
+    def __init__(self, bot):
+        super().__init__(timeout=None)
+        self.bot = bot
+
+    @discord.ui.button(label="Accueil", style=discord.ButtonStyle.primary)
+    async def home_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = discord.Embed(
+            title="💜 Menu d'aide",
+            description="[ + ] 𝐑𝐨𝐛𝐢𝐧\n\n**Tu as fait +help ?**\n\nUtilise le menu de sélection ci-dessous pour choisir une catégorie.\nLes permissions requises sont indiquées pour chaque commande.",
+            color=COLOR
+        )
+        await interaction.response.edit_message(embed=embed, view=HelpView(self.bot))
+
 
 class HelpView(View):
     def __init__(self, bot):
         super().__init__(timeout=None)
         self.add_item(HelpDropdown(bot))
+
 
 class HelpCommand(commands.Cog):
     """Help manuel pour tous les cogs"""
@@ -98,11 +128,12 @@ class HelpCommand(commands.Cog):
     async def help_command(self, ctx):
         """Afficher le menu d'aide"""
         embed = discord.Embed(
-            title="Menu d'aide",
-            description="Sélectionnez une catégorie ci-dessous :\n\nLes permissions requises sont indiquées pour chaque commande.",
+            title="💜 Menu d'aide",
+            description="[ + ] 𝐑𝐨𝐛𝐢𝐧\n\n**Tu as fait +help ?**\n\nUtilise le menu de sélection ci-dessous pour choisir une catégorie.\nLes permissions requises sont indiquées pour chaque commande.",
             color=COLOR
         )
         await ctx.send(embed=embed, view=HelpView(self.bot))
+
 
 # ------------------ Setup ------------------
 async def setup(bot):
