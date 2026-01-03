@@ -1,145 +1,109 @@
-from discord.ext import commands
+# help.py
 import discord
+from discord.ext import commands
+from discord.ui import View, Select
 
 COLOR = 0x6b00cb
 
-# ---------------- CATEGORIES MANUELLES ----------------
-COG_INFO = {
-    "Moderation": {"emoji": "🛡"},
-    "Fun": {"emoji": "🎉"},
-    "Giveaway": {"emoji": "🎁"},
-    "WelcomeVerification": {"emoji": "✉️"},
-    "Message": {"emoji": "💬"},
-    "Partenariat": {"emoji": "🤝"},
-    "Reglement": {"emoji": "📜"},
-    "Snipe": {"emoji": "👁️"},
-}
-
-HOME_TEXT = (
-    "[ + ] 𝐑𝐨𝐛𝐢𝐍\n\n"
-    "**Tu as fait +help ?**\n\n"
-    "👁️ Chaque commande est présentée avec une description claire expliquant ce qu'elle fait.\n"
-    "Certaines commandes sont réservées au propriétaire et n'apparaissent pas ici."
-)
-
-# ---------------- VIEW ----------------
-class HelpView(discord.ui.View):
+class HelpDropdown(Select):
     def __init__(self, bot):
-        super().__init__(timeout=180)
         self.bot = bot
 
-    @discord.ui.select(
-        placeholder="📂 Choisir une catégorie",
-        options=[]
-    )
-    async def select_callback(self, interaction: discord.Interaction, select: discord.ui.Select):
-        cog_name = select.values[0]
+        options = [
+            discord.SelectOption(label="Modération", description="Commandes pour modérer le serveur"),
+            discord.SelectOption(label="Giveaway", description="Commandes pour les giveaways"),
+            discord.SelectOption(label="Welcome / Verification", description="Configurations du welcome et verification"),
+            discord.SelectOption(label="Logs", description="Logs du serveur"),
+            discord.SelectOption(label="MessageChannel", description="Gestion des salons/messages"),
+            discord.SelectOption(label="Partenariat", description="Gestion du partenariat"),
+            discord.SelectOption(label="Règlement", description="Gestion du règlement"),
+            discord.SelectOption(label="Snipe", description="Affiche les messages supprimés"),
+            discord.SelectOption(label="Fun", description="Commandes fun pour le serveur")
+        ]
 
-        embed = discord.Embed(
-            title=f"{COG_INFO.get(cog_name, {}).get('emoji', '')} {cog_name}",
-            color=COLOR
-        )
+        super().__init__(placeholder="Sélectionnez une catégorie", min_values=1, max_values=1, options=options)
 
-        # Commandes définies manuellement pour chaque cog
-        commands_list = []
+        # Commandes classées par catégorie + permissions
+        self.cog_list = {
+            "Modération": [
+                "+kick <member_id> [raison] — Expulse un membre (Mod/Admin)",
+                "+ban <member_id> [raison] — Bannit un membre (Mod/Admin)",
+                "+unban <user_id> — Débannit un utilisateur (Mod/Admin)",
+                "+mute <member_id> [raison] — Mute un membre (Mod/Admin)",
+                "+unmute <member_id> — Unmute un membre (Mod/Admin)",
+                "+timeout <member_id> <minutes> — Timeout un membre (Max 28 jours) (Mod/Admin)",
+                "+giverole <member_id> <role_id> — Donne un rôle (Mod/Admin)",
+                "+takerole <member_id> <role_id> — Retire un rôle (Mod/Admin)",
+                "+warn <member_id> [raison] — Avertit un membre (Mod/Admin)",
+                "+warns <member_id> — Affiche les warns (Mod/Admin)",
+                "+unwarn <member_id> <num_warn> — Supprime un warn (Mod/Admin)",
+                "+purge <amount> — Supprime un nombre de messages (Mod/Admin)",
+                "+purgeall — Supprime tous les messages du salon (Mod/Admin)"
+            ],
+            "Giveaway": [
+                "+gyrole <role> — Définir les rôles autorisés à lancer des giveaways (Admin)",
+                "+gyveaway <durée> <récompense> — Lancer un giveaway (Admin)",
+                "+gyend <msg_id> — Terminer un giveaway actif (Admin)",
+                "+gyrestart <msg_id> — Relancer un giveaway actif (Admin)"
+            ],
+            "Welcome / Verification": [
+                "+setupverify — Configurer la vérification par emoji (Admin)",
+                "+setwelcome <#salon> <message> — Configurer le welcome texte (Admin)",
+                "+setwelcomeembed <#salon> <title> <description> [thumbnail] [image] — Configurer le welcome en embed (Admin)",
+                "+togglewelcome — Activer / désactiver le welcome (Admin)"
+            ],
+            "Logs": ["⚠️ Pas de commandes disponibles pour ce cog."],
+            "MessageChannel": [
+                "+say <message> — Envoyer un message simple (Admin)",
+                "+sayembed <message> — Envoyer un message en embed (Admin)",
+                "+createchannel <nom> [text/voice] — Créer un salon (Admin)",
+                "+deletechannel <salon> — Supprimer un salon (Admin)"
+            ],
+            "Partenariat": [
+                "+setpartnerrole <role> — Configure le rôle partenaire (Propriétaire uniquement)",
+                "+setpartnerchannel <#salon> — Configure le channel partenaire (Propriétaire uniquement)"
+            ],
+            "Règlement": [
+                "+reglement — Configurer le règlement étape par étape (Admin)",
+                "+showreglement — Affiche le règlement avec le bouton d'acceptation"
+            ],
+            "Snipe": [
+                "+snipe — Affiche le dernier message supprimé",
+                "+purge_snipes_global — Supprime tous les snipes (Owner uniquement)",
+                "+purge_snipes_guild — Supprime tous les snipes du serveur (Owner uniquement)"
+            ],
+            "Fun": [
+                "+papa — Envoie un compliment aléatoire pour papa / 𝐃𝐄𝐔𝐒"
+            ]
+        }
 
-        if cog_name == "Moderation":
-            commands_list = [
-                ("ban", "Bannir un membre du serveur."),
-                ("unban", "Débannir un membre."),
-                ("mute", "Mettre un membre en silence."),
-                ("unmute", "Retirer le mute d'un membre."),
-            ]
-        elif cog_name == "Fun":
-            commands_list = [
-                ("roll", "Lancer un dé."),
-                ("coin", "Lancer une pièce."),
-            ]
-        elif cog_name == "Giveaway":
-            commands_list = [
-                ("gyveaway", "Lancer un giveaway."),
-                ("gyrole", "Définir les rôles autorisés à lancer des giveaways."),
-                ("gyend", "Terminer un giveaway avant l'heure."),
-                ("gyrestart", "Relancer un giveaway terminé."),
-            ]
-        elif cog_name == "WelcomeVerification":
-            commands_list = [
-                ("setupverify", "Configurer la vérification avec emoji."),
-                ("setwelcome", "Configurer le message de bienvenue texte."),
-                ("setwelcomeembed", "Configurer le message de bienvenue en embed."),
-                ("togglewelcome", "Activer ou désactiver le welcome."),
-            ]
-        elif cog_name == "Message":
-            commands_list = [
-                ("say", "Envoyer un message simple."),
-                ("sayembed", "Envoyer un message en embed."),
-                ("createchannel", "Créer un salon textuel ou vocal."),
-                ("deletechannel", "Supprimer un salon textuel ou vocal."),
-            ]
-        elif cog_name == "Partenariat":
-            commands_list = [
-                ("setpartnerrole", "Configurer le rôle à ping lors d'un lien d'invitation."),
-                ("setpartnerchannel", "Configurer le channel où détecter les invitations."),
-            ]
-        elif cog_name == "Reglement":
-            commands_list = [
-                ("reglement", "Configurer le règlement du serveur étape par étape."),
-                ("showreglement", "Afficher le règlement avec bouton d'acceptation."),
-            ]
-        elif cog_name == "Snipe":
-            commands_list = [
-                ("snipe", "Afficher le dernier message supprimé."),
-                ("editsnipe", "Afficher le dernier message édité."),
-            ]
+    async def callback(self, interaction: discord.Interaction):
+        cog_name = self.values[0]
+        commands_list = self.cog_list.get(cog_name, ["⚠️ Pas de commandes disponibles pour ce cog."])
+        embed = discord.Embed(title=f"{cog_name}", description="\n".join(commands_list), color=COLOR)
+        await interaction.response.edit_message(embed=embed, view=self.view)
 
-        if not commands_list:
-            embed.description = "⚠️ Pas de commandes disponibles pour ce cog."
-        else:
-            for name, desc in commands_list:
-                embed.add_field(name=f"+{name}", value=desc, inline=False)
+class HelpView(View):
+    def __init__(self, bot):
+        super().__init__(timeout=None)
+        self.add_item(HelpDropdown(bot))
 
-        await interaction.response.edit_message(embed=embed, view=self)
-
-    @discord.ui.button(label="🏠 Accueil", style=discord.ButtonStyle.secondary)
-    async def home(self, interaction: discord.Interaction, button: discord.ui.Button):
-        embed = discord.Embed(
-            title="[ + ] 𝐑𝐨𝐛𝐢𝐍",
-            description=HOME_TEXT,
-            color=COLOR
-        )
-        await interaction.response.edit_message(embed=embed, view=self)
-
-# ---------------- COG ----------------
-class Help(commands.Cog):
-    """Help interactif complet et fiable"""
+class HelpCommand(commands.Cog):
+    """Help manuel pour tous les cogs"""
 
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name="help")
     async def help_command(self, ctx):
+        """Afficher le menu d'aide"""
         embed = discord.Embed(
-            title="[ + ] 𝐑𝐨𝐛𝐢𝐍",
-            description=HOME_TEXT,
+            title="Menu d'aide",
+            description="Sélectionnez une catégorie ci-dessous :\n\nLes permissions requises sont indiquées pour chaque commande.",
             color=COLOR
         )
+        await ctx.send(embed=embed, view=HelpView(self.bot))
 
-        view = HelpView(self.bot)
-
-        # Menu déroulant manuel avec toutes les catégories
-        options = []
-        for cog_name, info in COG_INFO.items():
-            if cog_name in ["Moderation","Fun","Giveaway","WelcomeVerification","Message","Partenariat","Reglement","Snipe"]:
-                description = "Commandes disponibles" if cog_name not in ["Message","Partenariat","Reglement"] else "⚠️ Pas de commandes disponibles" if cog_name in ["Message","Partenariat","Reglement"] else "Commandes disponibles"
-                options.append(discord.SelectOption(
-                    label=cog_name,
-                    emoji=info["emoji"],
-                    description=description
-                ))
-
-        view.select_callback.options = options
-        await ctx.send(embed=embed, view=view)
-
-# ---------------- SETUP ----------------
+# ------------------ Setup ------------------
 async def setup(bot):
-    await bot.add_cog(Help(bot))
+    await bot.add_cog(HelpCommand(bot))
