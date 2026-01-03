@@ -42,9 +42,12 @@ class HelpDropdown(Select):
             ],
             "Giveaway": [
                 "+gyrole <@rôle> — Définir les rôles autorisés à lancer des giveaways (Admin)",
-                "+gyveaway <durée> <récompense> — Lancer un giveaway (Admin)",
+                "+gyveaway <durée> <gagnants> <récompense> — Lancer un giveaway (Admin)\n"
+                "   Ex : +gyveaway 1j2h30m 3 Nitro",
                 "+gyend <msg_id> — Terminer un giveaway actif (Admin)",
-                "+gyrestart <msg_id> — Relancer un giveaway actif (Admin)"
+                "+gyvalidate <msg_id> — Valider manuellement un giveaway (Admin)\n"
+                "   Affiche le gagnant, ping et DM automatiquement",
+                "   Bouton “Relancer” disponible pour choisir un nouveau gagnant si activé"
             ],
             "Welcome / Vérification": [
                 "+setupverify — Configurer la vérification par emoji (Admin)",
