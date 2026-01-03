@@ -55,7 +55,7 @@ class Owner(commands.Cog):
         if not await self.check_owner(ctx): return
         await self.safe_send(ctx, "✅ Le bot est en ligne.")
 
-    @commands.command(help="Envoyer un DM | Exemple : +dm 123456789012345678 Salut !")
+    @commands.command(help="Envoyer un DM [ID obligatoire] | Exemple : +dm 123456789012345678 Salut !")
     async def dm(self, ctx, user_id: int, *, message):
         if not await self.check_owner(ctx): return
         try:
@@ -79,9 +79,8 @@ class Owner(commands.Cog):
         await self.safe_send(ctx, "💾 Configuration restaurée.")
 
     # ---------------- SNIPES OWNER ----------------
-    @commands.command(help="Purge un snipe salon ou global | Exemple : +snipe_clear 123456789012345678 ou +snipe_clear")
+    @commands.command(help="Purge un snipe salon ou global [ID salon optionnel] | Exemple : +snipe_clear 123456789012345678 ou +snipe_clear")
     async def snipe_clear(self, ctx, channel_id: int = None):
-        """Supprime les snipes d'un salon ou globalement"""
         if not await self.check_owner(ctx): return
         if channel_id:
             removed = self.bot.db.data.get("snipes", {}).pop(str(channel_id), None)
@@ -94,7 +93,6 @@ class Owner(commands.Cog):
 
     @commands.command(help="Supprime les snipes expirés >24h | Exemple : +snipe_expire")
     async def snipe_expire(self, ctx):
-        """Supprime automatiquement les snipes expirés (>24h)"""
         if not await self.check_owner(ctx): return
         snipes = self.bot.db.data.get("snipes", {})
         now = int(time.time())
@@ -156,7 +154,7 @@ class Owner(commands.Cog):
         await self.bot.change_presence(activity=discord.Game(name=text), status=status)
         await self.safe_send(ctx, f"✅ Statut changé en {type} | {text}")
 
-    @commands.command(help="Recharger un cog | Exemple : +reload Snipe")
+    @commands.command(help="Recharger un cog [Nom du cog] | Exemple : +reload Snipe")
     async def reload(self, ctx, cog: str):
         if not await self.check_owner(ctx): return
         try:
@@ -194,7 +192,7 @@ class Owner(commands.Cog):
         mem = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024
         await self.safe_send(ctx, f"Utilisation mémoire : {mem:.2f}MB")
 
-    @commands.command(help="Quitter un serveur | Exemple : +leaveserver 123456789012345678")
+    @commands.command(help="Quitter un serveur [ID obligatoire] | Exemple : +leaveserver 123456789012345678")
     async def leaveserver(self, ctx, guild_id: int):
         if not await self.check_owner(ctx): return
         guild = self.bot.get_guild(guild_id)
@@ -205,9 +203,10 @@ class Owner(commands.Cog):
             await self.safe_send(ctx, "❌ Serveur introuvable.")
 
     # ---------------- HELP PAPA ----------------
-    @commands.command(name="help.papa", help="Affiche toutes les commandes Owner/Créateur | Exemple : +help.papa")
+    @commands.command(name="help.papa", help="Affiche toutes les commandes Owner/Créateur | Réservé au propriétaire")
     async def help_papa(self, ctx):
-        if not await self.check_owner(ctx): return
+        if ctx.author.id != OWNER_ID:
+            return await self.safe_send(ctx, "⛔ Cette commande est réservée au propriétaire @𝐃𝐄𝐔𝐒")
         embed = discord.Embed(title="💜 Aide Owner", color=COLOR)
         commands_list = [c for c in self.get_commands() if not c.hidden]
         description = ""
