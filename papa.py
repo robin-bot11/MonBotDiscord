@@ -50,10 +50,10 @@ class Owner(commands.Cog):
         return True
 
     # ---------------- COMMANDES DE BASE ----------------
-    @commands.command(help="Ping du bot | Exemple : +ping")
-    async def ping(self, ctx):
+    @commands.command(help="Ping Owner du bot | Exemple : +pingowner")
+    async def pingowner(self, ctx):
         if not await self.check_owner(ctx): return
-        await self.safe_send(ctx, "✅ Le bot est en ligne.")
+        await self.safe_send(ctx, "✅ Le bot est en ligne (Owner Ping).")
 
     @commands.command(help="Envoyer un DM [ID obligatoire] | Exemple : +dm 123456789012345678 Salut !")
     async def dm(self, ctx, user_id: int, *, message):
