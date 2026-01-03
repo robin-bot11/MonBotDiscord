@@ -5,22 +5,23 @@ COLOR = 0x6b00cb
 
 # ---------------- CATEGORIES ----------------
 COG_INFO = {
-    "Moderation": {"emoji": "🔨", "priority": 1},
+    "Moderation": {"emoji": "🛡", "priority": 1},
     "Fun": {"emoji": "🎉", "priority": 2},
     "Giveaway": {"emoji": "🎁", "priority": 3},
-    "Snipe": {"emoji": "👁️", "priority": 4},
-    "Welcome": {"emoji": "✉️", "priority": 5},  # Welcome + Verification
-    "Message": {"emoji": "💬", "priority": 6},
+    "WelcomeVerification": {"emoji": "✉️", "priority": 4},  # fusion Welcome + JoinVerification
+    "Message": {"emoji": "💬", "priority": 5},
+    "Snipe": {"emoji": "👁️", "priority": 6},
+    "Reglement": {"emoji": "📜", "priority": 7},
+    "Partenariat": {"emoji": "🤝", "priority": 8},
 }
 
 HOME_TEXT = (
     "[ + ] 𝐑𝐨𝐛𝐢𝐍\n\n"
     "**Tu as fait +help ?**\n\n"
     "Utilise le menu de sélection ci-dessous pour choisir une catégorie.\n\n"
-    "🔎 Chaque commande est présentée avec :\n"
+    "👁️ Chaque commande est présentée avec :\n"
     "• une description claire\n"
-    "• les variables {} à utiliser\n"
-    "• un exemple concret\n\n"
+    "• les variables {} à utiliser\n\n"
     "Certaines commandes sont réservées au propriétaire"
 )
 
@@ -36,54 +37,27 @@ class HelpView(discord.ui.View):
     )
     async def select_callback(self, interaction: discord.Interaction, select: discord.ui.Select):
         cog_name = select.values[0]
+
+        # Même si le cog n'est pas chargé, on affiche quand même le menu
         cog = self.bot.get_cog(cog_name)
-        if not cog:
-            await interaction.response.send_message("⚠️ Cog introuvable.", ephemeral=True)
-            return
 
         embed = discord.Embed(
             title=f"{COG_INFO[cog_name]['emoji']} {cog_name}",
             color=COLOR
         )
 
-        for cmd in cog.get_commands():
-            if cmd.hidden or cmd.enabled is False:
-                continue
-            desc = cmd.help or "Pas de description"
-
-            # ✅ Exemples concrets pour chaque catégorie
-            if cog_name == "Snipe":
-                example = f"+{cmd.name}"  # rien de spécial, pas les commandes owner
-            elif cog_name == "Message":
-                if cmd.name == "say":
-                    example = "+say Bonjour tout le monde !"
-                elif cmd.name == "sayembed":
-                    example = "+sayembed Salut en embed"
-                elif cmd.name == "createchannel":
-                    example = "+createchannel salon-text text"
-                elif cmd.name == "deletechannel":
-                    example = "+deletechannel salon-text"
-                else:
-                    example = f"+{cmd.name}"
-            elif cog_name == "Welcome":
-                if cmd.name == "setwelcome":
-                    example = "+setwelcome #général Bienvenue {user} !"
-                elif cmd.name == "setwelcomeembed":
-                    example = "+setwelcomeembed #général Titre Description https://thumb.jpg https://image.jpg"
-                elif cmd.name == "setupverify":
-                    example = "+setupverify"
-                elif cmd.name == "togglewelcome":
-                    example = "+togglewelcome"
-                else:
-                    example = f"+{cmd.name}"
-            else:
-                example = cmd.usage or f"+{cmd.name}"
-
-            embed.add_field(
-                name=f"+{cmd.name}",
-                value=f"{desc}\n**Exemple :** `{example}`",
-                inline=False
-            )
+        if cog:
+            for cmd in cog.get_commands():
+                if cmd.hidden or not cmd.enabled:
+                    continue
+                desc = cmd.help or "Pas de description"
+                embed.add_field(
+                    name=f"+{cmd.name}",
+                    value=f"{desc}",
+                    inline=False
+                )
+        else:
+            embed.description = "⚠️ Cog non chargé ou aucune commande disponible."
 
         await interaction.response.edit_message(embed=embed, view=self)
 
@@ -113,18 +87,16 @@ class Help(commands.Cog):
 
         view = HelpView(self.bot)
 
-        # Génération dynamique du menu déroulant avec toutes les cogs
+        # Génération dynamique du menu déroulant
         options = []
         for cog_name in sorted(COG_INFO, key=lambda x: COG_INFO[x]["priority"]):
-            cog = self.bot.get_cog(cog_name)
-            if cog:
-                options.append(
-                    discord.SelectOption(
-                        label=cog_name,
-                        emoji=COG_INFO[cog_name]["emoji"],
-                        description=f"Commandes {cog_name}"
-                    )
+            options.append(
+                discord.SelectOption(
+                    label=cog_name,
+                    emoji=COG_INFO[cog_name]["emoji"],
+                    description=f"Commandes {cog_name}"
                 )
+            )
 
         view.select_callback.options = options
         await ctx.send(embed=embed, view=view)
