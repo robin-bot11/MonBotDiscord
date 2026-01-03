@@ -1,11 +1,11 @@
 from discord.ext import commands
 import discord
 import asyncio
-from storx import Database  # Assure-toi que c'est correct
+from storx import Database  # Vérifie que c'est bien ton module DB
 
 COLOR = 0x6b00cb
 
-class Policy(commands.Cog):
+class Reglement(commands.Cog):
     """Gestion du règlement avec embed et bouton d'acceptation."""
 
     def __init__(self, bot):
@@ -139,4 +139,4 @@ class Policy(commands.Cog):
 
 # -------------------- SETUP --------------------
 async def setup(bot):
-    await bot.add_cog(Policy(bot))
+    await bot.add_cog(Reglement(bot))
