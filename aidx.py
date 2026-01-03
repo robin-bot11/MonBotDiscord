@@ -23,7 +23,7 @@ class HelpDropdown(Select):
 
         super().__init__(placeholder="Sélectionnez une catégorie", min_values=1, max_values=1, options=options)
 
-        # Commandes classées par catégorie + permissions
+        # Commandes classées par catégorie + retours à la ligne pour lisibilité
         self.cog_list = {
             "Modération": [
                 "+kick <membre_id> [raison] — Expulse un membre (Mod/Admin)",
@@ -42,12 +42,9 @@ class HelpDropdown(Select):
             ],
             "Giveaway": [
                 "+gyrole <@rôle> — Définir les rôles autorisés à lancer des giveaways (Admin)",
-                "+gyveaway <durée> <gagnants> <récompense> — Lancer un giveaway (Admin)\n"
-                "   Ex : +gyveaway 1j2h30m 3 Nitro",
+                "+gyveaway <durée> <gagnants> <récompense> — Lancer un giveaway (Admin)\n   Ex : +gyveaway 1j2h30m 3 Nitro",
                 "+gyend <msg_id> — Terminer un giveaway actif (Admin)",
-                "+gyvalidate <msg_id> — Valider manuellement un giveaway (Admin)\n"
-                "   Affiche le gagnant, ping et DM automatiquement",
-                "   Bouton “Relancer” disponible pour choisir un nouveau gagnant si activé"
+                "+gyvalidate <msg_id> — Valider manuellement un giveaway (Admin)\n   Affiche le gagnant, ping et DM automatiquement\n   Bouton “Relancer” disponible pour choisir un nouveau gagnant si activé"
             ],
             "Welcome / Vérification": [
                 "+setupverify — Configurer la vérification par emoji (Admin)",
@@ -90,12 +87,13 @@ class HelpDropdown(Select):
     async def callback(self, interaction: discord.Interaction):
         cog_name = self.values[0]
         commands_list = self.cog_list.get(cog_name, ["⚠️ Pas de commandes disponibles pour ce cog."])
-        embed = discord.Embed(
-            title=f"{cog_name}",
-            description="\n".join(commands_list),
-            color=COLOR
-        )
-
+        
+        embed = discord.Embed(title=f"{cog_name}", color=COLOR)
+        
+        # Chaque commande devient un champ embed séparé
+        for i, cmd in enumerate(commands_list, 1):
+            embed.add_field(name=f"Commande {i}", value=cmd, inline=False)
+        
         # Ajoute le bouton "Accueil"
         view = HomeButtonView(self.bot)
         view.add_item(self)
@@ -125,7 +123,6 @@ class HelpView(View):
 # ---------------- HELP COMMAND ----------------
 class HelpCommand(commands.Cog):
     """Help manuel pour tous les cogs"""
-
     def __init__(self, bot):
         self.bot = bot
 
