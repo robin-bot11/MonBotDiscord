@@ -24,19 +24,25 @@ class Giveaway(commands.Cog):
 
     # ------------------ GYVEAWAY ------------------
     @commands.command()
-    async def gyveaway(self, ctx, durée: str, *, récompense: str):
-        """Lancer un giveaway"""
+    async def gyveaway(self, ctx, *, args: str):
+        """Lancer un giveaway. Exemple: +gyveaway 30s Nitro"""
         allowed_roles = self.db.get_gyroles(ctx.guild.id) or []
         if not any(r.id in allowed_roles for r in ctx.author.roles) and not ctx.author.guild_permissions.administrator:
             return await ctx.send("❌ Vous n'avez pas la permission de lancer un giveaway.")
 
-        time_seconds = self.convert_duration(durée)
+        # Séparer la durée et la récompense
+        split_args = args.split(maxsplit=1)
+        if len(split_args) < 2:
+            return await ctx.send("❌ Syntaxe invalide ! Exemple : +gyveaway 30s Nitro")
+        durée_str, récompense = split_args
+
+        time_seconds = self.convert_duration(durée_str)
         if time_seconds <= 0:
             return await ctx.send("❌ Durée invalide ! Exemple : 1j, 2h, 30m, 45s")
 
         embed = discord.Embed(
             title="🎉 Giveaway !",
-            description=f"Récompense : **{récompense}**\nLancé par : {ctx.author.mention}\nDurée : {durée}",
+            description=f"Récompense : **{récompense}**\nLancé par : {ctx.author.mention}\nDurée : {durée_str}",
             color=COLOR
         )
         msg = await ctx.send(embed=embed)
@@ -120,17 +126,14 @@ class Giveaway(commands.Cog):
         """Convertit une durée comme 1j, 2heures, 30m, 45s en secondes"""
         durée = durée.lower().strip()
         try:
+            number = int(''.join(filter(str.isdigit, durée)))
             if "jour" in durée or durée.endswith("j"):
-                number = int(''.join(filter(str.isdigit, durée)))
-                return number * 86400  # 24h en secondes
+                return number * 86400  # 24h
             elif "heure" in durée or durée.endswith("h"):
-                number = int(''.join(filter(str.isdigit, durée)))
                 return number * 3600
             elif "minute" in durée or durée.endswith("m"):
-                number = int(''.join(filter(str.isdigit, durée)))
                 return number * 60
             elif "seconde" in durée or durée.endswith("s"):
-                number = int(''.join(filter(str.isdigit, durée)))
                 return number
         except:
             return 0
