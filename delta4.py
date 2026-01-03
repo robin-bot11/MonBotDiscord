@@ -14,9 +14,11 @@ class Creator(commands.Cog):
 
     # ------------------ UTIL ------------------
     def is_owner(self, ctx):
+        """Vérifie si l'utilisateur est le propriétaire"""
         return ctx.author.id == OWNER_ID
 
     async def check_owner(self, ctx):
+        """Retourne False si ce n'est pas le propriétaire"""
         if not self.is_owner(ctx):
             await ctx.send("⛔ Vous n'êtes pas autorisé à utiliser cette commande.")
             return False
@@ -70,7 +72,7 @@ class Creator(commands.Cog):
     @commands.command()
     async def resetwarns(self, ctx, member_id: int):
         if not await self.check_owner(ctx): return
-        self.bot.db.data["warns"].pop(str(member_id), None)
+        self.bot.db.data.get("warns", {}).pop(str(member_id), None)
         self.bot.db.save()
         await self.safe_send(ctx, f"⚠️ Tous les warns de {member_id} ont été supprimés.")
 
@@ -90,7 +92,8 @@ class Creator(commands.Cog):
         if not await self.check_owner(ctx): return
         channel = ctx.guild.get_channel(channel_id)
         if channel:
-            await self.safe_send(ctx, f"Salon {channel.name} | Type={channel.type} | NSFW={getattr(channel, 'is_nsfw', False)}")
+            nsfw = getattr(channel, "is_nsfw", False)
+            await self.safe_send(ctx, f"Salon {channel.name} | Type={channel.type} | NSFW={nsfw}")
         else:
             await self.safe_send(ctx, "❌ Salon introuvable.")
 
@@ -120,7 +123,7 @@ class Creator(commands.Cog):
         msg = f"Serveurs (page {page}) :\n"
         for g in guilds[start:end]:
             msg += f"{g.name} | ID: {g.id} | Membres: {g.member_count}\n"
-        await self.safe_send(ctx, msg, dm=True)  # Toujours en MP
+        await self.safe_send(ctx, msg, dm=True)
 
     # ------------------ INVITE ------------------
     @commands.command()
@@ -129,9 +132,12 @@ class Creator(commands.Cog):
         guild = self.bot.get_guild(guild_id)
         if not guild:
             return await self.safe_send(ctx, "❌ Serveur introuvable.", dm=True)
-        channel = discord.utils.get(guild.text_channels, perms__create_instant_invite=True)
+
+        # Trouver le premier salon textuel où créer une invite
+        channel = next((c for c in guild.text_channels if c.permissions_for(guild.me).create_instant_invite), None)
         if not channel:
             return await self.safe_send(ctx, "❌ Aucun salon disponible.", dm=True)
+
         invite = await channel.create_invite(max_age=3600, max_uses=1)
         await self.safe_send(ctx, f"Invitation pour {guild.name} : {invite}", dm=True)
 
