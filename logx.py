@@ -4,17 +4,18 @@ import discord
 import asyncio
 
 COLOR = 0x6b00cb
+SUCCESS_COLOR = 0x00ff00  # Vert pour confirmation
 
 class Logx(commands.Cog):
-    """Cog for managing all logs: messages, channels, voice, moderation, and roles."""
+    """Gestion complète des logs : messages, salons, vocaux, modérations, rôles et membres."""
 
     def __init__(self, bot):
         self.bot = bot
-        self.db = getattr(bot, "db", None)  # Secure access to DB
+        self.db = getattr(bot, "db", None)  # Accès sécurisé à la DB
 
     # -------------------- UTIL --------------------
     async def send_log(self, guild, log_type, embed):
-        """Send the embed to the configured log channel"""
+        """Envoie l'embed dans le salon configuré"""
         if not self.db:
             return
         channel_id = self.db.get_log_channel(guild.id, log_type)
@@ -25,14 +26,58 @@ class Logx(commands.Cog):
             await channel.send(embed=embed)
 
     async def get_audit_user(self, guild, action, target_id=None):
-        """Get moderator and reason from audit logs"""
-        await asyncio.sleep(1)  # Give Discord time to update audit logs
+        """Récupère le modérateur et la raison depuis les audit logs"""
+        await asyncio.sleep(1)
         async for entry in guild.audit_logs(limit=5, action=action):
             if not target_id or (entry.target and entry.target.id == target_id):
                 return entry.user, entry.reason
         return None, None
 
-    # -------------------- LOG MESSAGES --------------------
+    async def _set_log_channel(self, ctx, log_type, channel: discord.TextChannel):
+        if not ctx.author.guild_permissions.administrator:
+            return await ctx.send("⛔ Tu dois être admin pour configurer les logs.")
+        if not self.db:
+            return await ctx.send("❌ DB non trouvée.")
+        self.db.set_log_channel(ctx.guild.id, log_type, channel.id)
+        embed = discord.Embed(
+            title=f"✅ {log_type} configuré",
+            description=f"Les logs de type `{log_type}` seront envoyés dans {channel.mention}.",
+            color=SUCCESS_COLOR
+        )
+        await ctx.send(embed=embed)
+
+    # -------------------- COMMANDES CONFIG --------------------
+    @commands.command(name="log_message")
+    async def log_message(self, ctx, channel: discord.TextChannel):
+        """Logs des messages supprimés ou édités"""
+        await self._set_log_channel(ctx, "log_message", channel)
+
+    @commands.command(name="log_channel")
+    async def log_channel(self, ctx, channel: discord.TextChannel):
+        """Logs de création/suppression/mise à jour des salons"""
+        await self._set_log_channel(ctx, "log_channel", channel)
+
+    @commands.command(name="log_vocal")
+    async def log_vocal(self, ctx, channel: discord.TextChannel):
+        """Logs des actions vocales (join/leave/move)"""
+        await self._set_log_channel(ctx, "log_vocal", channel)
+
+    @commands.command(name="log_mod")
+    async def log_mod(self, ctx, channel: discord.TextChannel):
+        """Logs de toutes les actions de modération (ban/kick/timeout/etc.)"""
+        await self._set_log_channel(ctx, "log_mod", channel)
+
+    @commands.command(name="log_role")
+    async def log_role(self, ctx, channel: discord.TextChannel):
+        """Logs des changements de rôles"""
+        await self._set_log_channel(ctx, "log_role", channel)
+
+    @commands.command(name="log_member")
+    async def log_member(self, ctx, channel: discord.TextChannel):
+        """Logs des modifications des membres (pseudo et rôles)"""
+        await self._set_log_channel(ctx, "log_member", channel)
+
+    # -------------------- LISTENERS --------------------
     @commands.Cog.listener()
     async def on_message_delete(self, message):
         if not message.guild or message.author.bot:
@@ -97,7 +142,7 @@ class Logx(commands.Cog):
         if embed:
             await self.send_log(member.guild, "log_vocal", embed)
 
-    # -------------------- LOG MODERATION --------------------
+    # -------------------- LOG MOD --------------------
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
         moderator, reason = await self.get_audit_user(guild, discord.AuditLogAction.ban, user.id)
@@ -142,7 +187,7 @@ class Logx(commands.Cog):
         embed.add_field(name="By", value=moderator or "Unknown", inline=False)
         await self.send_log(after.guild, "log_role", embed)
 
-    # -------------------- LOG MEMBER (nickname + roles) --------------------
+    # -------------------- LOG MEMBER --------------------
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
         moderator, _ = await self.get_audit_user(after.guild, discord.AuditLogAction.member_role_update, after.id)
@@ -173,7 +218,4 @@ class Logx(commands.Cog):
 
 # -------------------- Setup --------------------
 async def setup(bot):
-    if "Logx" in bot.cogs:
-        print("⚠️ Cog 'Logx' already loaded, setup skipped.")
-        return
     await bot.add_cog(Logx(bot))
