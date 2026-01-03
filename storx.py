@@ -67,14 +67,6 @@ class Database:
 
     # ------------------ Welcome ------------------
     def set_welcome(self, guild_id, channel_id=None, message=None, embed_data=None, enabled=True):
-        """
-        embed_data = {
-            "title": str,
-            "description": str,
-            "thumbnail": str or None,
-            "image": str or None
-        }
-        """
         self.data.setdefault("welcome", {})
         self.data["welcome"][str(guild_id)] = {
             "channel": channel_id,
@@ -97,7 +89,17 @@ class Database:
         return self.data.get("welcome", {}).get(str(guild_id), {})
 
     # ------------------ Verification ------------------
-    def set_verification(self, guild_id, role_valid, isolation_role=None, title=None, description=None, button_text=None, message_id=None, emoji=None):
+    def set_verification(
+        self,
+        guild_id,
+        role_valid,
+        isolation_role=None,
+        title=None,
+        description=None,
+        button_text=None,
+        message_id=None,
+        emoji=None
+    ):
         self.data.setdefault("verification", {})
         self.data["verification"][str(guild_id)] = {
             "role_valid": role_valid,
@@ -128,3 +130,22 @@ class Database:
         self.data["verification"].setdefault(str(guild_id), {})
         self.data["verification"][str(guild_id)]["tries"][str(member_id)] = 0
         self.save()
+
+    # ------------------ Partner ------------------
+    def set_partner_role(self, guild_id, role_id):
+        self.data.setdefault("partner", {})
+        self.data["partner"].setdefault(str(guild_id), {})
+        self.data["partner"][str(guild_id)]["role"] = role_id
+        self.save()
+
+    def get_partner_role(self, guild_id):
+        return self.data.get("partner", {}).get(str(guild_id), {}).get("role")
+
+    def set_partner_channel(self, guild_id, channel_id):
+        self.data.setdefault("partner", {})
+        self.data["partner"].setdefault(str(guild_id), {})
+        self.data["partner"][str(guild_id)]["channel"] = channel_id
+        self.save()
+
+    def get_partner_channel(self, guild_id):
+        return self.data.get("partner", {}).get(str(guild_id), {}).get("channel")
