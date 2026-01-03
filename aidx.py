@@ -1,4 +1,3 @@
-# help.py
 import discord
 from discord.ext import commands
 from discord.ui import View, Select, Button
@@ -13,7 +12,7 @@ class HelpDropdown(Select):
         options = [
             discord.SelectOption(label="Modération", description="Commandes pour modérer le serveur"),
             discord.SelectOption(label="Giveaway", description="Commandes pour les giveaways"),
-            discord.SelectOption(label="Welcome / Verification", description="Configurations du welcome et verification"),
+            discord.SelectOption(label="Welcome / Vérification", description="Configurations du welcome et vérification"),
             discord.SelectOption(label="Logs", description="Logs du serveur"),
             discord.SelectOption(label="MessageChannel", description="Gestion des salons/messages"),
             discord.SelectOption(label="Partenariat", description="Gestion des partenariats"),
@@ -27,49 +26,49 @@ class HelpDropdown(Select):
         # Commandes classées par catégorie + permissions
         self.cog_list = {
             "Modération": [
-                "+kick <member_id> [reason] — Expulse un membre (Mod/Admin)",
-                "+ban <member_id> [reason] — Bannit un membre (Mod/Admin)",
+                "+kick <membre_id> [raison] — Expulse un membre (Mod/Admin)",
+                "+ban <membre_id> [raison] — Bannit un membre (Mod/Admin)",
                 "+unban <user_id> — Débannit un utilisateur (Mod/Admin)",
-                "+mute <member_id> [reason] — Mute un membre (Mod/Admin)",
-                "+unmute <member_id> — Unmute un membre (Mod/Admin)",
-                "+timeout <member_id> <minutes> — Timeout un membre (Max 28 jours) (Mod/Admin)",
-                "+giverole <member_id> <role_id> — Donne un rôle (Mod/Admin)",
-                "+takerole <member_id> <role_id> — Retire un rôle (Mod/Admin)",
-                "+warn <member_id> [reason] — Avertit un membre (Mod/Admin)",
-                "+warns <member_id> — Affiche les warns (Mod/Admin)",
-                "+unwarn <member_id> <num_warn> — Supprime un warn (Mod/Admin)",
-                "+purge <amount> — Supprime un nombre de messages (Mod/Admin)",
+                "+mute <membre_id> [raison] — Mute un membre (Mod/Admin)",
+                "+unmute <membre_id> — Unmute un membre (Mod/Admin)",
+                "+timeout <membre_id> <minutes> — Timeout un membre (Max 28 jours) (Mod/Admin)",
+                "+giverole <membre_id> <role_id> — Donne un rôle (Mod/Admin)",
+                "+takerole <membre_id> <role_id> — Retire un rôle (Mod/Admin)",
+                "+warn <membre_id> [raison] — Avertit un membre (Mod/Admin)",
+                "+warns <membre_id> — Affiche les warns (Mod/Admin)",
+                "+unwarn <membre_id> <num_warn> — Supprime un warn (Mod/Admin)",
+                "+purge <nombre> — Supprime un nombre de messages (Mod/Admin)",
                 "+purgeall — Supprime tous les messages du salon (Mod/Admin)"
             ],
             "Giveaway": [
-                "+gyrole <role> — Définir les rôles autorisés à lancer des giveaways (Admin)",
-                "+gyveaway <duration> <reward> — Lancer un giveaway (Admin)",
+                "+gyrole <@rôle> — Définir les rôles autorisés à lancer des giveaways (Admin)",
+                "+gyveaway <durée> <récompense> — Lancer un giveaway (Admin)",
                 "+gyend <msg_id> — Terminer un giveaway actif (Admin)",
                 "+gyrestart <msg_id> — Relancer un giveaway actif (Admin)"
             ],
-            "Welcome / Verification": [
+            "Welcome / Vérification": [
                 "+setupverify — Configurer la vérification par emoji (Admin)",
-                "+setwelcome <#channel> <message> — Configurer le welcome texte (Admin)",
-                "+setwelcomeembed <#channel> <title> <description> [thumbnail] [image] — Configurer le welcome en embed (Admin)",
+                "+setwelcome <#salon> <message> — Configurer le welcome texte (Admin)",
+                "+setwelcomeembed <#salon> <titre> <description> [thumbnail] [image] — Configurer le welcome en embed (Admin)",
                 "+togglewelcome — Activer / désactiver le welcome (Admin)"
             ],
             "Logs": [
-                "+log_message #channel — Logs messages deleted/edited",
-                "+log_channel #channel — Logs channel creation/deletion/update",
-                "+log_vocal #channel — Logs voice actions (join/leave/move)",
-                "+log_mod #channel — Logs all moderation actions (ban/kick/timeout/etc.)",
-                "+log_role #channel — Logs role changes (add/remove/create/delete/permissions update)",
-                "+log_member #channel — Logs member updates (nickname and roles)"
+                "+log_message #salon — Logs des messages supprimés ou édités",
+                "+log_channel #salon — Logs de création/suppression/mise à jour des salons",
+                "+log_vocal #salon — Logs des actions vocales (join/leave/move)",
+                "+log_mod #salon — Logs de toutes les actions de modération (ban/kick/timeout/etc.)",
+                "+log_role #salon — Logs des changements de rôles (ajout/retrait/création/suppression/mise à jour des permissions)",
+                "+log_member #salon — Logs des modifications des membres (pseudo et rôles)"
             ],
             "MessageChannel": [
                 "+say <message> — Envoyer un message simple (Admin)",
                 "+sayembed <message> — Envoyer un message en embed (Admin)",
-                "+createchannel <name> [text/voice] — Créer un salon (Admin)",
-                "+deletechannel <channel> — Supprimer un salon (Admin)"
+                "+createchannel <nom> [text/voice] — Créer un salon (Admin)",
+                "+deletechannel <salon> — Supprimer un salon (Admin)"
             ],
             "Partenariat": [
-                "+setpartnerrole <role> — Configure le rôle partenaire (Owner uniquement)",
-                "+setpartnerchannel <#channel> — Configure le channel partenaire (Owner uniquement)"
+                "+setpartnerrole <rôle> — Configure le rôle partenaire (Owner uniquement)",
+                "+setpartnerchannel <#salon> — Configure le channel partenaire (Owner uniquement)"
             ],
             "Règlement": [
                 "+reglement — Configurer le règlement étape par étape (Admin)",
