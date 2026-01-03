@@ -1,10 +1,8 @@
-# helpx.py
 import discord
 from discord.ext import commands
 from discord.ui import View, Select, Button
 
 OWNER_ID = 1383790178522370058  # Remplace par ton ID
-
 COLOR = 0x6b00cb
 
 # ---------------- HELP VIEW ----------------
@@ -49,6 +47,7 @@ def get_category_embed(category):
     if category == "Fun":
         embed = discord.Embed(title="📂 Fun", color=COLOR)
         embed.add_field(name="+papa", value="Mon papa ? 𝐃𝐄𝐔𝐒\nLe légendaire pilier du serveur.", inline=False)
+
     elif category == "Modération":
         embed = discord.Embed(title="📂 Modération", color=COLOR)
         embed.add_field(name="+kick", value="Expulse un membre du serveur.", inline=False)
@@ -64,20 +63,24 @@ def get_category_embed(category):
         embed.add_field(name="+unwarn", value="Supprime un warn spécifique.", inline=False)
         embed.add_field(name="+purge", value="Supprime un nombre spécifique de messages.", inline=False)
         embed.add_field(name="+purgeall", value="Supprime tous les messages du salon.", inline=False)
+
     elif category == "Bienvenue / Vérification":
         embed = discord.Embed(title="📂 Bienvenue / Vérification", color=COLOR)
         embed.add_field(name="+setupverify", value="Configurer la vérification avec emoji", inline=False)
         embed.add_field(name="+setwelcome", value="Configurer le welcome simple (texte)", inline=False)
         embed.add_field(name="+setwelcomeembed", value="Configurer le welcome en embed", inline=False)
         embed.add_field(name="+togglewelcome", value="Activer / désactiver le welcome", inline=False)
+
     elif category == "Logs":
         embed = discord.Embed(title="📂 Logs", color=COLOR)
         embed.add_field(name="+logchannel", value="Configure le salon des logs", inline=False)
         embed.add_field(name="+loglevel", value="Affiche ou change le niveau de logs", inline=False)
         embed.add_field(name="+snipe", value="Récupère le dernier message supprimé.", inline=False)
+
     elif category == "Snipe":
         embed = discord.Embed(title="📂 Snipe", color=COLOR)
         embed.add_field(name="+snipe", value="Récupère le dernier message supprimé.", inline=False)
+
     elif category == "Owner":
         embed = discord.Embed(title="📂 Owner", color=COLOR)
         embed.add_field(name="+ping", value="Vérifie si le bot répond. — Protégée / Owner", inline=False)
@@ -94,6 +97,9 @@ def get_category_embed(category):
         embed.add_field(name="+shutdownbot", value="Éteint le bot. — Protégée / Owner", inline=False)
         embed.add_field(name="+restartbot", value="Redémarre le bot. — Protégée / Owner", inline=False)
         embed.add_field(name="+eval", value="Évalue du code Python. — Protégée / Owner", inline=False)
+        embed.add_field(name="+status", value="Change le statut du bot. — Protégée / Owner", inline=False)
+        embed.add_field(name="+setprefix", value="Change le préfixe du bot. — Protégée / Owner", inline=False)
+
     else:
         embed = discord.Embed(title="Aucune commande trouvée pour cette catégorie", color=COLOR)
     return embed
