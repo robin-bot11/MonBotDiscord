@@ -1,106 +1,64 @@
+# help.py
+from discord.ext import commands
 import discord
 
 COLOR = 0x6b00cb
 
-def get_category_embed(category):
-    """
-    Retourne un embed pour la catégorie donnée avec toutes ses commandes.
-    Chaque catégorie est dans un seul embed pour éviter le scroll.
-    """
+# ⚡ Priorité et emoji pour chaque cog
+COG_INFO = {
+    "Moderation": {"emoji": "🔨", "priority": 1},
+    "Logx": {"emoji": "📜", "priority": 2},
+    "MessageChannel": {"emoji": "✉️", "priority": 3},
+    "Partenariat": {"emoji": "🤝", "priority": 4},
+    "Policy": {"emoji": "📄", "priority": 5},
+    "Snipe": {"emoji": "🔍", "priority": 6},
+    "Help": {"emoji": "💜", "priority": 99},  # Mettre en dernier
+}
 
-    embed = discord.Embed(color=COLOR)
+class Help(commands.Cog):
+    """Commande +help personnalisée avec tri pro"""
 
-    # ---------------- Fun ----------------
-    if category.lower() == "fun":
-        embed.title = "📂 Fun"
-        embed.description = "Commandes amusantes pour votre serveur."
-        embed.add_field(name="+8ball <question>", value="Pose une question et le bot répond.", inline=False)
-        embed.add_field(name="+meme", value="Envoie un meme aléatoire.", inline=False)
-        embed.add_field(name="+say <texte>", value="Le bot répète votre texte.", inline=False)
+    def __init__(self, bot):
+        self.bot = bot
 
-    # ---------------- Modération ----------------
-    elif category.lower() == "modération":
-        embed.title = "📂 Modération"
-        embed.description = "Commandes pour gérer votre serveur."
-        embed.add_field(name="+ban <@membre> [raison]", value="Bannit un membre.", inline=False)
-        embed.add_field(name="+kick <@membre> [raison]", value="Expulse un membre.", inline=False)
-        embed.add_field(name="+mute <@membre> [raison]", value="Mute un membre.", inline=False)
-        embed.add_field(name="+unmute <@membre>", value="Unmute un membre.", inline=False)
-        embed.add_field(name="+warn <@membre> [raison]", value="Avertit un membre.", inline=False)
-        embed.add_field(name="+infractions <@membre>", value="Affiche les infractions d'un membre.", inline=False)
+    @commands.command(name="help")
+    async def help_command(self, ctx, cog_name: str = None):
+        """Affiche toutes les commandes ou celles d'un cog spécifique"""
+        embed = discord.Embed(title="💜 Aide du bot", color=COLOR)
 
-    # ---------------- Logs ----------------
-    elif category.lower() == "logs":
-        embed.title = "📂 Logs"
-        embed.description = "Configuration des salons de logs."
-        embed.add_field(name="+setlog <type> <#salon>", value="Configure le salon pour les logs.\nTypes: role, mod, voice, channel, message, member.", inline=False)
+        if cog_name:  # Affichage d'un cog spécifique
+            cog = self.bot.get_cog(cog_name.capitalize())
+            if not cog:
+                return await ctx.send(f"❌ Cog `{cog_name}` introuvable.")
+            commands_list = cog.get_commands()
+            if not commands_list:
+                return await ctx.send(f"❌ Aucun commande trouvée dans `{cog_name}`.")
+            description = ""
+            for cmd in commands_list:
+                description += f"**+{cmd.name}** : {cmd.help or 'Pas de description'}\n"
+            embed.title = f"💜 Commandes pour `{cog_name}`"
+            embed.description = description
+            await ctx.send(embed=embed)
+        else:  # Affichage de toutes les catégories, triées par priorité
+            # Récupère toutes les cogs avec priorité
+            cogs_sorted = sorted(
+                self.bot.cogs.items(),
+                key=lambda x: COG_INFO.get(x[0], {"priority": 999})["priority"]
+            )
 
-    # ---------------- Owner ----------------
-    elif category.lower() == "owner":
-        embed.title = "📂 Owner"
-        embed.description = "Commandes réservées au propriétaire du bot."
-        embed.add_field(name="+shutdown", value="Éteint le bot.", inline=False)
-        embed.add_field(name="+poweron", value="Rallume le bot.", inline=False)
-        embed.add_field(name="+restart", value="Redémarre le bot.", inline=False)
-        embed.add_field(name="+eval <code>", value="Exécute du code Python.", inline=False)
-        embed.add_field(name="+purgeall", value="Supprime tous les messages d'un salon.", inline=False)
-        embed.add_field(name="+say <texte>", value="Le bot parle dans un salon.", inline=False)
-        embed.add_field(name="+status <texte>", value="Change le statut du bot.", inline=False)
-        embed.add_field(name="+setprefix <nouveau préfixe>", value="Change le préfixe du bot.", inline=False)
-        embed.add_field(name="+backupconfig", value="Sauvegarde la configuration du bot.", inline=False)
-        embed.add_field(name="+restoreconfig", value="Restaure la configuration sauvegardée.", inline=False)
+            for cog_name, cog in cogs_sorted:
+                commands_list = cog.get_commands()
+                if not commands_list:
+                    continue
+                description = ""
+                for cmd in commands_list:
+                    description += f"**+{cmd.name}** : {cmd.help or 'Pas de description'}\n"
+                emoji = COG_INFO.get(cog_name, {}).get("emoji", "")
+                embed.add_field(name=f"{emoji} {cog_name}", value=description, inline=False)
 
-    # ---------------- Giveaway ----------------
-    elif category.lower() == "giveaway":
-        embed.title = "📂 Giveaway"
-        embed.description = "Commandes pour gérer les giveaways."
-        embed.add_field(name="+gyveaway", value="Lancer un giveaway.", inline=False)
-        embed.add_field(name="+gyrole", value="Définir les rôles autorisés à lancer des giveaways.", inline=False)
-        embed.add_field(name="+gyend", value="Terminer un giveaway avant l'heure.", inline=False)
-        embed.add_field(name="+gyrestart", value="Relancer un giveaway terminé.", inline=False)
+            embed.set_footer(text="Utilise +help <cog> pour voir les commandes d'une catégorie spécifique.")
+            await ctx.send(embed=embed)
 
-    # ---------------- Welcome ----------------
-    elif category.lower() == "welcome":
-        embed.title = "📂 Bienvenue / Welcome"
-        embed.description = "Système de messages de bienvenue."
-        embed.add_field(name="+setwelcome <message>", value="Configurer le message de bienvenue.\nVariables autorisées: {user}, {server}, {members}", inline=False)
-        embed.add_field(name="+setwelcomechannel <#salon>", value="Configurer le salon pour les messages de bienvenue.", inline=False)
-
-    # ---------------- Message / Channel ----------------
-    elif category.lower() == "messagechannel":
-        embed.title = "📂 Message & Channel"
-        embed.description = "Commandes pour gérer les salons et messages."
-        embed.add_field(name="+clear <nombre>", value="Supprime le nombre de messages spécifié.", inline=False)
-        embed.add_field(name="+lock <#salon>", value="Verrouille le salon.", inline=False)
-        embed.add_field(name="+unlock <#salon>", value="Déverrouille le salon.", inline=False)
-        embed.add_field(name="+slowmode <#salon> <secondes>", value="Configure le slowmode.", inline=False)
-
-    # ---------------- Partnership ----------------
-    elif category.lower() == "partnership":
-        embed.title = "📂 Partenariat"
-        embed.description = "Gestion des partenariats sur votre serveur."
-        embed.add_field(name="+setpartnerrole <@rôle>", value="Définit le rôle à ping pour un lien d'invitation.\nSeul le propriétaire peut l'utiliser.", inline=False)
-        embed.add_field(name="+setpartnerchannel <#salon>", value="Configure le salon où les liens d'invitation seront détectés.", inline=False)
-        embed.add_field(name="Détection automatique", value="Lorsqu'un lien Discord est posté, le rôle configuré est mentionné automatiquement.", inline=False)
-
-    # ---------------- Policy / Règlement ----------------
-    elif category.lower() == "policy":
-        embed.title = "📂 Règlement / Policy"
-        embed.description = "Gestion du règlement avec embed et bouton."
-        embed.add_field(name="+reglement", value="Assistant pour configurer le règlement étape par étape.", inline=False)
-        embed.add_field(name="+showreglement", value="Affiche le règlement avec le bouton d'acceptation.", inline=False)
-        embed.add_field(name="Gestion rôles supprimés", value="Prévient automatiquement le propriétaire et le salon si le rôle lié au règlement est supprimé.", inline=False)
-
-    # ---------------- Snipe ----------------
-    elif category.lower() == "snipe":
-        embed.title = "📂 Snipe"
-        embed.description = "Affiche les messages supprimés dans les salons."
-        embed.add_field(name="+snipe", value="Affiche le dernier message supprimé dans le salon.", inline=False)
-        embed.add_field(name="Listener automatique", value="Chaque message supprimé est automatiquement sauvegardé.", inline=False)
-
-    # ---------------- Catégorie non trouvée ----------------
-    else:
-        embed.title = "❌ Catégorie inconnue"
-        embed.description = f"Aucune commande trouvée pour `{category}`."
-
-    return embed
+# -------------------- Setup --------------------
+async def setup(bot):
+    await bot.add_cog(Help(bot))
