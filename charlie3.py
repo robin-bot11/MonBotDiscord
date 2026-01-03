@@ -1,8 +1,7 @@
-# charlie3.py
 from discord.ext import commands
 import discord
 from datetime import datetime
-from storx import Database  # Pour récupérer les salons de logs dynamiquement
+from storx import Database  # Base de données pour récupérer les salons de logs dynamiquement
 
 COLOR = 0x6b00cb
 
@@ -23,7 +22,10 @@ class Logs(commands.Cog):
             return
         channel = guild.get_channel(channel_id)
         if channel:
-            await channel.send(embed=embed)
+            try:
+                await channel.send(embed=embed)
+            except discord.Forbidden:
+                pass
 
     # ==================================================
     # ROLES — AJOUT / RETRAIT
@@ -37,10 +39,13 @@ class Logs(commands.Cog):
             return
 
         moderator = "Inconnu"
-        async for entry in after.guild.audit_logs(limit=1, action=discord.AuditLogAction.member_role_update):
-            if entry.target.id == after.id:
-                moderator = entry.user
-                break
+        try:
+            async for entry in after.guild.audit_logs(limit=5, action=discord.AuditLogAction.member_role_update):
+                if entry.target.id == after.id:
+                    moderator = entry.user
+                    break
+        except discord.Forbidden:
+            pass
 
         embed = discord.Embed(
             title="🎭 Mise à jour des rôles",
@@ -79,35 +84,38 @@ class Logs(commands.Cog):
         if before.communication_disabled_until == after.communication_disabled_until:
             return
 
-        async for entry in after.guild.audit_logs(limit=1, action=discord.AuditLogAction.member_update):
-            if entry.target.id != after.id:
-                continue
+        try:
+            async for entry in after.guild.audit_logs(limit=5, action=discord.AuditLogAction.member_update):
+                if entry.target.id != after.id:
+                    continue
 
-            if after.communication_disabled_until:
-                embed = discord.Embed(
-                    title="⏱️ Timeout appliqué",
-                    color=COLOR,
-                    timestamp=datetime.utcnow()
-                )
-                embed.add_field(name="Membre", value=after.mention, inline=False)
-                embed.add_field(name="Modérateur", value=entry.user.mention, inline=False)
-                embed.add_field(
-                    name="Jusqu’au",
-                    value=discord.utils.format_dt(after.communication_disabled_until, "F"),
-                    inline=False
-                )
-                embed.add_field(name="Raison", value=entry.reason or "Aucune", inline=False)
-            else:
-                embed = discord.Embed(
-                    title="🔓 Timeout retiré",
-                    color=COLOR,
-                    timestamp=datetime.utcnow()
-                )
-                embed.add_field(name="Membre", value=after.mention, inline=False)
-                embed.add_field(name="Modérateur", value=entry.user.mention, inline=False)
+                if after.communication_disabled_until:
+                    embed = discord.Embed(
+                        title="⏱️ Timeout appliqué",
+                        color=COLOR,
+                        timestamp=datetime.utcnow()
+                    )
+                    embed.add_field(name="Membre", value=after.mention, inline=False)
+                    embed.add_field(name="Modérateur", value=entry.user.mention, inline=False)
+                    embed.add_field(
+                        name="Jusqu’au",
+                        value=discord.utils.format_dt(after.communication_disabled_until, "F"),
+                        inline=False
+                    )
+                    embed.add_field(name="Raison", value=entry.reason or "Aucune", inline=False)
+                else:
+                    embed = discord.Embed(
+                        title="🔓 Timeout retiré",
+                        color=COLOR,
+                        timestamp=datetime.utcnow()
+                    )
+                    embed.add_field(name="Membre", value=after.mention, inline=False)
+                    embed.add_field(name="Modérateur", value=entry.user.mention, inline=False)
 
-            await self.send_log(after.guild, "mod", embed)
-            break
+                await self.send_log(after.guild, "mod", embed)
+                break
+        except discord.Forbidden:
+            pass
 
     # ==================================================
     # WARN (via audit logs / raison)
