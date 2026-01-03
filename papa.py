@@ -1,140 +1,127 @@
 import discord
 from discord.ext import commands
-import asyncio
-from datetime import datetime
-import traceback
-import psutil
-import os
 
 OWNER_ID = 1383790178522370058
 COLOR = 0x6b00cb
 
-# ---------------- COG OWNER ----------------
-class Owner(commands.Cog):
-    """Toutes les commandes Owner/Créateur, incluant contrôle des snipes et menu d'aide"""
-
-    def __init__(self, bot):
-        self.bot = bot
-        self.locked = False
-
-    # ---------------- UTIL ----------------
-    def is_owner(self, ctx):
-        return ctx.author.id == OWNER_ID
-
-    async def check_owner(self, ctx):
-        if not self.is_owner(ctx):
-            await ctx.send("⛔ Vous n'êtes pas autorisé à utiliser cette commande.")
-            return False
-        return True
-
-    async def safe_send(self, ctx, content=None, embed=None, dm=False):
-        try:
-            if dm:
-                if embed:
-                    await ctx.author.send(embed=embed)
-                else:
-                    await ctx.author.send(content)
-            else:
-                if embed:
-                    await ctx.send(embed=embed)
-                else:
-                    await ctx.send(content)
-        except discord.Forbidden:
-            pass
-
-    async def cog_check(self, ctx):
-        if self.locked and not self.is_owner(ctx):
-            await ctx.send("⛔ Le bot est actuellement verrouillé.")
-            return False
-        return True
-
-    # ---------------- COMMANDES OWNER ----------------
-    @commands.command(name="owner_ping")
-    async def owner_ping(self, ctx):
-        """Ping du bot"""
-        if not await self.check_owner(ctx): return
-        await self.safe_send(ctx, "✅ Le bot est en ligne.")
-
-    # ---------------- HELP PAPA ----------------
-    @commands.command(name="help.papa")
-    async def help_papa(self, ctx):
-        """Menu d'aide Owner"""
-        if not self.is_owner(ctx):
-            return await self.safe_send(ctx, "⛔ Cette commande est réservée au propriétaire @𝐃𝐄𝐔𝐒")
-
-        embed = discord.Embed(
-            title="💜 Menu d'aide Owner",
-            description="[ + ] 𝐑𝐨𝐛𝐢𝐧\nVoici toutes les commandes Owner/Créateur disponibles.\nUtilise le menu ci-dessous pour naviguer.",
-            color=COLOR
-        )
-
-        # Récupère toutes les commandes Owner (hors cachées)
-        owner_commands = [c for c in self.get_commands() if not c.hidden and c.name != "help.papa"]
-
-        commands_text = ""
-        for cmd in owner_commands:
-            commands_text += f"**+{cmd.name}** : {cmd.help or 'Pas de description'}\n"
-
-        embed.add_field(name="Owner Commands", value=commands_text or "Aucune commande trouvée", inline=False)
-
-        # Vue dropdown + accueil
-        view = HelpOwnerView(self.bot)
-
-        await ctx.send(embed=embed, view=view)
-
-
-# ---------------- HELP OWNER DROPDOWN ----------------
-class HelpOwnerDropdown(discord.ui.Select):
+# ---------------- HELP OWNER PAPA ----------------
+class HelpPapaDropdown(discord.ui.Select):
     def __init__(self, bot):
         self.bot = bot
         options = [
-            discord.SelectOption(label="Owner Commands", description="Toutes les commandes Owner/Créateur")
+            discord.SelectOption(label="Commandes de base"),
+            discord.SelectOption(label="Config / Backup"),
+            discord.SelectOption(label="Check"),
+            discord.SelectOption(label="Listes"),
+            discord.SelectOption(label="Invite"),
+            discord.SelectOption(label="Système"),
+            discord.SelectOption(label="Eval"),
+            discord.SelectOption(label="Statut / Reload"),
+            discord.SelectOption(label="Info / Mémoire / Latence"),
+            discord.SelectOption(label="Lock / Unlock Bot")
         ]
         super().__init__(placeholder="Sélectionnez une catégorie", min_values=1, max_values=1, options=options)
 
+        # Commandes classées avec description détaillée
+        self.commands_dict = {
+            "Commandes de base": [
+                "+ping — Vérifie si le bot est en ligne",
+                "+dm <user_id> <message> — Envoie un message privé à un utilisateur"
+            ],
+            "Config / Backup": [
+                "+backupconfig — Sauvegarde la configuration du bot",
+                "+restoreconfig — Restaure la configuration sauvegardée",
+                "+resetwarns <member_id> — Supprime tous les warns d'un membre sur le serveur"
+            ],
+            "Check": [
+                "+checkrole <role_id> — Affiche toutes les permissions d'un rôle",
+                "+checkchannel <channel_id> — Affiche les informations d'un salon",
+                "+checkmember <member_id> — Affiche les rôles d'un membre"
+            ],
+            "Listes": [
+                "+listbots — Liste tous les bots du serveur",
+                "+servers [page] — Liste les serveurs du bot (DM)"
+            ],
+            "Invite": [
+                "+invite <guild_id> — Crée une invitation pour le serveur spécifié"
+            ],
+            "Système": [
+                "+shutdownbot — Éteint le bot de façon sécurisée",
+                "+restartbot — Redémarre le bot"
+            ],
+            "Eval": [
+                "+eval <code> — Exécute du code Python (Owner uniquement)"
+            ],
+            "Statut / Reload": [
+                "+status <type> <texte> — Change le statut du bot (online/dnd/idle/invisible)",
+                "+reload <cog> — Recharge un cog spécifique",
+                "+reloadall — Recharge tous les cogs du bot"
+            ],
+            "Info / Mémoire / Latence": [
+                "+botinfo — Affiche les informations du bot, serveurs, latence et mémoire",
+                "+latency — Affiche la latence du bot en ms",
+                "+memory — Affiche la mémoire utilisée par le bot"
+            ],
+            "Lock / Unlock Bot": [
+                "+lockbot — Verrouille le bot, interdit l'utilisation des commandes sauf Owner",
+                "+unlockbot — Déverrouille le bot",
+                "+leaveserver <guild_id> — Fait quitter le bot d'un serveur spécifique"
+            ]
+        }
+
     async def callback(self, interaction: discord.Interaction):
-        owner_cog = interaction.client.get_cog("Owner")
-        owner_commands = [c for c in owner_cog.get_commands() if not c.hidden and c.name != "help.papa"]
-
-        commands_text = ""
-        for cmd in owner_commands:
-            commands_text += f"**+{cmd.name}** : {cmd.help or 'Pas de description'}\n"
-
+        category = self.values[0]
+        commands_list = self.commands_dict.get(category, ["⚠️ Pas de commandes trouvées"])
         embed = discord.Embed(
-            title="💜 Menu d'aide Owner",
-            description="[ + ] 𝐑𝐨𝐛𝐢𝐧\nToutes les commandes Owner/Créateur disponibles.",
+            title=f"💜 Owner Commands — {category}",
+            description="\n".join(commands_list),
             color=COLOR
         )
-        embed.add_field(name="Owner Commands", value=commands_text or "Aucune commande trouvée", inline=False)
-
-        view = HomeOwnerButtonView(self.bot)
+        view = HomeOwnerView(self.bot)
         view.add_item(self)
         await interaction.response.edit_message(embed=embed, view=view)
-
 
 # ---------------- HELP OWNER VIEW ----------------
 class HelpOwnerView(discord.ui.View):
     def __init__(self, bot):
         super().__init__(timeout=None)
-        self.add_item(HelpOwnerDropdown(bot))
-
+        self.add_item(HelpPapaDropdown(bot))
 
 # ---------------- BOUTON ACCUEIL ----------------
-class HomeOwnerButtonView(discord.ui.View):
+class HomeOwnerView(discord.ui.View):
     def __init__(self, bot):
         super().__init__(timeout=None)
         self.bot = bot
 
     @discord.ui.button(label="Accueil", style=discord.ButtonStyle.primary)
     async def home_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != OWNER_ID:
+            return await interaction.response.send_message("⛔ Vous n'êtes pas autorisé.", ephemeral=True)
         embed = discord.Embed(
-            title="💜 Menu d'aide",
-            description="[ + ] 𝐑𝐨𝐛𝐢𝐧\n\n**Tu as fait +help ?**\n\nUtilise le menu ci-dessous pour choisir une catégorie.\nLes permissions sont indiquées pour chaque commande.",
+            title="💜 Menu d'aide Owner",
+            description="Voici toutes les commandes Owner/Créateur disponibles. Utilise le menu pour naviguer.",
             color=COLOR
         )
         await interaction.response.edit_message(embed=embed, view=HelpOwnerView(self.bot))
 
+# ---------------- HELP PAPA COMMAND ----------------
+class HelpPapaCommand(commands.Cog):
+    """Menu d'aide Owner/Créateur avec descriptions détaillées"""
+
+    def __init__(self, bot):
+        self.bot = bot
+
+    @commands.command(name="help.papa")
+    async def help_papa(self, ctx):
+        if ctx.author.id != OWNER_ID:
+            return await ctx.send("⛔ Cette commande est réservée au propriétaire @𝐃𝐄𝐔𝐒")
+        embed = discord.Embed(
+            title="💜 Menu d'aide Owner",
+            description="Voici toutes les commandes Owner/Créateur disponibles. Utilise le menu ci-dessous pour naviguer.",
+            color=COLOR
+        )
+        await ctx.send(embed=embed, view=HelpOwnerView(self.bot))
 
 # ---------------- SETUP ----------------
 async def setup(bot):
-    await bot.add_cog(Owner(bot))
+    await bot.add_cog(HelpPapaCommand(bot))
