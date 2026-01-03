@@ -5,6 +5,7 @@ from discord.ui import View, Select, Button
 
 COLOR = 0x6b00cb
 
+# ---------------- HELP DROPDOWN ----------------
 class HelpDropdown(Select):
     def __init__(self, bot):
         self.bot = bot
@@ -53,11 +54,11 @@ class HelpDropdown(Select):
                 "+togglewelcome — Activer / désactiver le welcome (Admin)"
             ],
             "Logs": [
-                "on_message_delete / on_message_edit — Logs des messages supprimés ou édités",
-                "on_guild_channel_create / delete / update — Logs des salons",
-                "on_voice_state_update — Logs des vocaux (join / leave / move)",
-                "on_member_ban / on_member_remove — Logs des actions de modération",
-                "on_member_update — Logs des rôles ajoutés / retirés"
+                "🗑️ **on_message_delete / on_message_edit** — Logs des messages supprimés ou édités",
+                "📁 **on_guild_channel_create / delete / update** — Logs des salons",
+                "🔊 **on_voice_state_update** — Logs des vocaux (join / leave / move)",
+                "🔨 **on_member_ban / on_member_remove** — Logs des actions de modération",
+                "🎭 **on_member_update** — Logs des rôles ajoutés / retirés"
             ],
             "MessageChannel": [
                 "+say <message> — Envoyer un message simple (Admin)",
@@ -91,12 +92,13 @@ class HelpDropdown(Select):
             description="\n".join(commands_list),
             color=COLOR
         )
+
         # Ajoute le bouton "Accueil"
         view = HomeButtonView(self.bot)
         view.add_item(self)
         await interaction.response.edit_message(embed=embed, view=view)
 
-
+# ---------------- BOUTON ACCUEIL ----------------
 class HomeButtonView(View):
     def __init__(self, bot):
         super().__init__(timeout=None)
@@ -111,13 +113,13 @@ class HomeButtonView(View):
         )
         await interaction.response.edit_message(embed=embed, view=HelpView(self.bot))
 
-
+# ---------------- HELP VIEW ----------------
 class HelpView(View):
     def __init__(self, bot):
         super().__init__(timeout=None)
         self.add_item(HelpDropdown(bot))
 
-
+# ---------------- HELP COMMAND ----------------
 class HelpCommand(commands.Cog):
     """Help manuel pour tous les cogs"""
 
@@ -134,7 +136,6 @@ class HelpCommand(commands.Cog):
         )
         await ctx.send(embed=embed, view=HelpView(self.bot))
 
-
-# ------------------ Setup ------------------
+# ---------------- SETUP ----------------
 async def setup(bot):
     await bot.add_cog(HelpCommand(bot))
