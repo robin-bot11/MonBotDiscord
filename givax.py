@@ -8,15 +8,15 @@ from storx import Database
 
 COLOR = 0x6b00cb
 EMOJI = "🎉"
-RELAUNCH_DURATION_HOURS = 12  # Durée max avant expiration du bouton relancer
+RELAUNCH_DURATION = 12 * 3600  # bouton relancer actif max 12h
 
 
 class Giveaway(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.db = Database()
-        self.giveaways = self.db.get("giveaways", {})
-        self.resume_giveaways_task.start()
+        self.giveaways = self.db.data.get("giveaways", {})
+        self.bot.loop.create_task(self.resume_giveaways())
 
     # ---------------- DURÉE ----------------
     def parse_duration(self, text):
@@ -35,7 +35,7 @@ class Giveaway(commands.Cog):
                 total += value
         return total
 
-    # ---------------- GYVEAWAY ----------------
+    # ---------------- LANCER ----------------
     @commands.command()
     async def gyveaway(self, ctx, duration: str, winners: int, *, prize: str):
         if not ctx.author.guild_permissions.manage_guild:
@@ -71,11 +71,11 @@ class Giveaway(commands.Cog):
             "prize": prize,
             "host": ctx.author.id,
             "ended": False,
-            "participants": []
+            "relaunch_allowed": True
         }
-        self.db.set("giveaways", self.giveaways)
+        self.db.data["giveaways"] = self.giveaways
+        self.db.save()
 
-        # Tâche de fin
         self.bot.loop.create_task(self.wait_end(msg.id))
 
     # ---------------- PARTICIPANTS LIVE ----------------
@@ -88,14 +88,7 @@ class Giveaway(commands.Cog):
         if msg_id not in self.giveaways:
             return
 
-        users = set()
-        async for u in reaction.users():
-            if not u.bot:
-                users.add(u.id)
-        self.giveaways[msg_id]["participants"] = list(users)
-        self.db.set("giveaways", self.giveaways)
-
-        # Update compteur participants
+        users = [u async for u in reaction.users() if not u.bot]
         embed = reaction.message.embeds[0]
         embed.description = re.sub(
             r"👥 \*\*Participants :\*\* \d+",
@@ -114,117 +107,92 @@ class Giveaway(commands.Cog):
         if delay > 0:
             await asyncio.sleep(delay)
 
-        # Marque comme terminé
-        data["ended"] = True
-        self.db.set("giveaways", self.giveaways)
-
-        # Sélectionne gagnants
         await self.finish_giveaway(msg_id)
 
-    # ---------------- FIN DU GIVEAWAY ----------------
-    async def finish_giveaway(self, msg_id):
+    # ---------------- FIN GIVEAWAY / RELANCER ----------------
+    async def finish_giveaway(self, msg_id, relaunch=False):
         data = self.giveaways.get(str(msg_id))
-        if not data:
+        if not data or data["ended"]:
             return
 
         channel = self.bot.get_channel(data["channel_id"])
-        msg = await channel.fetch_message(int(msg_id))
-
-        participants = data.get("participants", [])
-        if not participants:
-            await channel.send("❌ Personne n'a participé au giveaway...")
-            del self.giveaways[msg_id]
-            self.db.set("giveaways", self.giveaways)
+        try:
+            msg = await channel.fetch_message(int(msg_id))
+        except:
+            del self.giveaways[str(msg_id)]
+            self.db.data["giveaways"] = self.giveaways
+            self.db.save()
             return
 
-        winners = random.sample(participants, min(len(participants), data["winners"]))
-        mentions = ", ".join(f"<@{w}>" for w in winners)
+        users = set()
+        for r in msg.reactions:
+            if str(r.emoji) == EMOJI:
+                async for u in r.users():
+                    if not u.bot:
+                        users.add(u)
 
-        embed = discord.Embed(
-            title="🎉 GIVEAWAY TERMINÉ 🎉",
-            description=(
-                f"🎁 **Prix :** {data['prize']}\n"
-                f"🏆 {mentions}\n"
-            ),
-            color=COLOR
+        if not users:
+            await channel.send(f"❌ Personne n'a participé au giveaway **{data['prize']}**.")
+            del self.giveaways[str(msg_id)]
+            self.db.data["giveaways"] = self.giveaways
+            self.db.save()
+            return
+
+        winners = random.sample(list(users), min(len(users), data["winners"]))
+        mentions = ", ".join(w.mention for w in winners)
+
+        await channel.send(
+            f"🎉 Félicitations {mentions} ! Vous avez gagné **{data['prize']}** 🎉"
         )
-        await msg.edit(embed=embed, view=None)
 
-        # DM + ping
         for w in winners:
-            user = await self.bot.fetch_user(w)
             try:
-                await user.send(f"🎉 Tu as gagné **{data['prize']}** sur {channel.guild.name}")
+                await w.send(f"🎉 Tu as gagné **{data['prize']}** sur {channel.guild.name}")
             except:
                 pass
 
-        # Ajoute le bouton relancer si moins de 12h
-        if datetime.utcnow().timestamp() - data["end"] < RELAUNCH_DURATION_HOURS * 3600:
-            view = GiveawayRelauchView(self, msg, participants, data["winners"], data["prize"])
-            await msg.edit(view=view)
+        data["ended"] = True
+        data["relaunch_allowed"] = False
+        self.db.data["giveaways"] = self.giveaways
+        self.db.save()
+
+        # ---------------- BOUTON RELANCER ----------------
+        if not relaunch:
+            view = discord.ui.View(timeout=43200)  # bouton actif max 12h
+            button = discord.ui.Button(label="Relancer", style=discord.ButtonStyle.success)
+
+            async def relaunch_callback(interaction):
+                if not data["relaunch_allowed"]:
+                    await interaction.response.send_message("❌ Impossible de relancer.", ephemeral=True)
+                    return
+                # choisit nouveaux gagnants immédiatement
+                await self.finish_giveaway(msg_id, relaunch=True)
+                await interaction.response.send_message("🔁 Giveaway relancé avec de nouveaux gagnants !", ephemeral=True)
+
+            button.callback = relaunch_callback
+            view.add_item(button)
+            await channel.send("🔁 Clique pour relancer le giveaway :", view=view)
+
+        # supprime du DB si relaunch
+        if relaunch:
+            del self.giveaways[str(msg_id)]
+            self.db.data["giveaways"] = self.giveaways
+            self.db.save()
+
+    # ---------------- VALIDATION MANUELLE ----------------
+    @commands.command()
+    async def gyvalidate(self, ctx, msg_id: int):
+        if str(msg_id) not in self.giveaways:
+            return await ctx.send("❌ Giveaway introuvable.")
+        await self.finish_giveaway(msg_id)
+        await ctx.send(f"✅ Giveaway {msg_id} terminé manuellement.")
 
     # ---------------- REBOOT ----------------
-    @tasks.loop(count=1)
-    async def resume_giveaways_task(self):
+    async def resume_giveaways(self):
         await self.bot.wait_until_ready()
-        for msg_id, data in self.giveaways.items():
-            if not data["ended"]:
-                self.bot.loop.create_task(self.wait_end(int(msg_id)))
-
-# ---------------- BOUTON RELANCER ----------------
-class GiveawayRelauchView(discord.ui.View):
-    def __init__(self, cog: Giveaway, msg, participants, winners_count, prize):
-        super().__init__(timeout=None)
-        self.cog = cog
-        self.msg = msg
-        self.participants = participants
-        self.winners_count = winners_count
-        self.prize = prize
-        self.add_item(GiveawayRelaunchButton(self.cog, self.msg, self.participants, self.winners_count, self.prize))
-
-class GiveawayRelaunchButton(discord.ui.Button):
-    def __init__(self, cog, msg, participants, winners_count, prize):
-        super().__init__(label="Relancer", style=discord.ButtonStyle.primary)
-        self.cog = cog
-        self.msg = msg
-        self.participants = participants
-        self.winners_count = winners_count
-        self.prize = prize
-        self.creation_time = datetime.utcnow()
-
-    async def callback(self, interaction: discord.Interaction):
-        # Expire après 12h
-        if (datetime.utcnow() - self.creation_time).total_seconds() > RELAUNCH_DURATION_HOURS * 3600:
-            return await interaction.response.send_message("⛔ Ce bouton a expiré.", ephemeral=True)
-
-        if not self.participants:
-            return await interaction.response.send_message("❌ Aucun participant restant.", ephemeral=True)
-
-        # Nouveau(s) gagnant(s)
-        winners = random.sample(self.participants, min(len(self.participants), self.winners_count))
-        mentions = ", ".join(f"<@{w}>" for w in winners)
-
-        embed = discord.Embed(
-            title="🎉 GIVEAWAY RELANCÉ 🎉",
-            description=(
-                f"🎁 **Prix :** {self.prize}\n"
-                f"🏆 {mentions}\n"
-            ),
-            color=COLOR
-        )
-        await self.msg.edit(embed=embed, view=None)
-
-        # DM + ping
-        for w in winners:
-            user = await self.cog.bot.fetch_user(w)
-            try:
-                await user.send(f"🎉 Tu as gagné **{self.prize}** sur {self.msg.guild.name}")
-            except:
-                pass
-
-        await interaction.response.send_message(f"✅ Nouveau(s) gagnant(s) choisi(s) !", ephemeral=True)
+        for msg_id in list(self.giveaways.keys()):
+            self.bot.loop.create_task(self.wait_end(int(msg_id)))
 
 
-# ---------------- SETUP ----------------
 async def setup(bot):
     await bot.add_cog(Giveaway(bot))
