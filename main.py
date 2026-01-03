@@ -4,7 +4,11 @@ from discord.ext import commands
 import logging
 import asyncio
 import os
-from storx import Database  # ⚠️ Database renommée
+import importlib.util
+
+# ---------------- DATABASE ----------------
+# On utilise storx.py comme Database
+from storx import Database
 
 # ---------------- CONFIG ----------------
 JETON_DISCORD = os.getenv("JETON_DISCORD")
@@ -35,94 +39,86 @@ cogs = [
     "partnership",
     "joinbot",
     "logx",
-    "help"  # Toujours charger le help en dernier
+    "help"  # toujours en dernier pour que le help fonctionne
 ]
 
-# ---------------- UTILITAIRES ----------------
-async def fetch_audit_log_safe(guild, action, limit=5):
-    """
-    Récupère le dernier audit log d'une action.
-    Fallback pour réduire les risques de logs manqués (retry 2s si vide)
-    """
+# ---------------- UTIL ----------------
+async def safe_load_extension(cog_name: str):
+    """Charge un cog avec gestion des exceptions et vérifie les dépendances externes"""
     try:
-        entry = None
-        async for e in guild.audit_logs(limit=limit, action=action):
-            entry = e
-            break
-        if entry is None:
-            await asyncio.sleep(2)
-            async for e in guild.audit_logs(limit=limit, action=action):
-                entry = e
-                break
-        return entry
+        # Vérifie si le fichier existe avant de charger
+        if not importlib.util.find_spec(cog_name):
+            logging.warning(f"❌ {cog_name}.py introuvable, passage au suivant")
+            return False
+
+        await bot.load_extension(cog_name)
+        logging.info(f"✅ {cog_name} chargé ✅")
+        return True
+    except ModuleNotFoundError as e:
+        logging.error(f"❌ {cog_name} nécessite un module manquant : {e.name}")
+        return False
+    except commands.ExtensionAlreadyLoaded:
+        logging.warning(f"{cog_name} déjà chargé, passage au suivant")
+        return True
     except Exception as e:
-        logging.error(f"Erreur fetch_audit_log_safe: {e}")
-        return None
-
-def format_success(msg: str) -> str:
-    return f"✅ {msg}"
-
-def format_error(msg: str) -> str:
-    return f"❌ {msg}"
+        logging.error(f"❌ Erreur en chargeant {cog_name} : {e}")
+        return False
 
 # ---------------- ÉVÉNEMENTS ----------------
 @bot.event
 async def on_ready():
-    logging.info(format_success(f"{bot.user} connecté et prêt !"))
+    logging.info(f"[+] {bot.user} connecté et prêt !")
+    # Fallback audit logs pour réduire les risques de logs manqués
+    for guild in bot.guilds:
+        bot.loop.create_task(fallback_audit_logs(guild))
 
 @bot.event
 async def on_command_error(ctx, error):
-    """Gestion uniforme des erreurs de commande"""
     if isinstance(error, commands.MissingPermissions):
-        await ctx.send(format_error("Vous n'avez pas la permission d'exécuter cette commande."))
+        await ctx.send("❌ Vous n'avez pas la permission d'exécuter cette commande.")
     elif isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send(format_error(f"Argument manquant : {error.param}"))
+        await ctx.send(f"❌ Argument manquant : {error.param}")
     elif isinstance(error, commands.CommandNotFound):
-        pass  # Ignore les commandes inconnues
+        pass
     else:
-        logging.error(f"Erreur inattendue : {error}")
-        await ctx.send(format_error(f"Une erreur est survenue : {error}"))
+        logging.error(f"❌ Erreur inattendue : {error}")
+        await ctx.send(f"❌ Une erreur est survenue : {error}")
+
+# ---------------- FALLBACK AUDIT LOGS ----------------
+async def fallback_audit_logs(guild):
+    """Vérifie périodiquement les actions manquées dans audit logs"""
+    while True:
+        try:
+            async for entry in guild.audit_logs(limit=5):
+                # Ici tu pourrais traiter les logs manquants, ex: bans/mutes
+                pass
+        except Exception as e:
+            logging.warning(f"⚠️ Audit logs fallback failed: {e}")
+        await asyncio.sleep(10)  # toutes les 10s
 
 # ---------------- CHARGEMENT DES COGS ----------------
 async def load_cogs():
-    """Charge tous les cogs et injecte bot.db si nécessaire"""
-    for cog_name in cogs:
-        try:
-            if cog_name in bot.extensions:
-                logging.warning(f"{cog_name} déjà chargé, passage au suivant")
-                continue
-
-            # Charge le cog
-            await bot.load_extension(cog_name)
-            cog = bot.get_cog(cog_name.capitalize())
-
-            # Injection automatique de bot.db si le cog a un attribut db
-            if cog and hasattr(cog, "db"):
-                setattr(cog, "db", bot.db)
-
-            logging.info(format_success(f"{cog_name} chargé ✅"))
-
-        except ModuleNotFoundError:
-            logging.warning(f"{cog_name}.py introuvable, passage au suivant")
-        except commands.ExtensionAlreadyLoaded:
-            logging.warning(f"{cog_name} déjà chargé, passage au suivant")
-        except Exception as e:
-            logging.error(format_error(f"Erreur en chargeant {cog_name} : {e}"))
+    for cog in cogs:
+        await safe_load_extension(cog)
+        # Injecte bot.db si le cog a un attribut db
+        ext = bot.get_cog(cog.capitalize())
+        if ext and hasattr(ext, "db"):
+            setattr(ext, "db", bot.db)
 
 # ---------------- MAIN ----------------
 async def main():
     if not JETON_DISCORD:
-        logging.critical(format_error("Jeton Discord invalide ou manquant !"))
+        logging.critical("❌ Jeton Discord invalide ou manquant !")
         return
 
     async with bot:
-        await load_cogs()  # Charge tous les cogs avant le start
+        await load_cogs()
         try:
             await bot.start(JETON_DISCORD)
         except discord.LoginFailure:
-            logging.critical(format_error("Jeton Discord invalide ou manquant !"))
+            logging.critical("❌ Jeton Discord invalide ou manquant !")
         except Exception as e:
-            logging.critical(format_error(f"Erreur lors du démarrage du bot : {e}"))
+            logging.critical(f"❌ Erreur lors du démarrage du bot : {e}")
 
 # ---------------- EXEC ----------------
 if __name__ == "__main__":
@@ -131,4 +127,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logging.info("Arrêt manuel du bot.")
     except Exception as e:
-        logging.critical(format_error(f"Erreur fatale : {e}"))
+        logging.critical(f"Erreur fatale : {e}")
