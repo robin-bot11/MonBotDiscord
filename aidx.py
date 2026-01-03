@@ -16,7 +16,7 @@ class HelpDropdown(Select):
             discord.SelectOption(label="Welcome / Verification", description="Configurations du welcome et verification"),
             discord.SelectOption(label="Logs", description="Logs du serveur"),
             discord.SelectOption(label="MessageChannel", description="Gestion des salons/messages"),
-            discord.SelectOption(label="Partenariat", description="Gestion du partenariat"),
+            discord.SelectOption(label="Partenariat", description="Gestion des partenariats"),
             discord.SelectOption(label="Règlement", description="Gestion du règlement"),
             discord.SelectOption(label="Snipe", description="Affiche les messages supprimés"),
             discord.SelectOption(label="Fun", description="Commandes fun pour le serveur")
@@ -27,15 +27,15 @@ class HelpDropdown(Select):
         # Commandes classées par catégorie + permissions
         self.cog_list = {
             "Modération": [
-                "+kick <member_id> [raison] — Expulse un membre (Mod/Admin)",
-                "+ban <member_id> [raison] — Bannit un membre (Mod/Admin)",
+                "+kick <member_id> [reason] — Expulse un membre (Mod/Admin)",
+                "+ban <member_id> [reason] — Bannit un membre (Mod/Admin)",
                 "+unban <user_id> — Débannit un utilisateur (Mod/Admin)",
-                "+mute <member_id> [raison] — Mute un membre (Mod/Admin)",
+                "+mute <member_id> [reason] — Mute un membre (Mod/Admin)",
                 "+unmute <member_id> — Unmute un membre (Mod/Admin)",
                 "+timeout <member_id> <minutes> — Timeout un membre (Max 28 jours) (Mod/Admin)",
                 "+giverole <member_id> <role_id> — Donne un rôle (Mod/Admin)",
                 "+takerole <member_id> <role_id> — Retire un rôle (Mod/Admin)",
-                "+warn <member_id> [raison] — Avertit un membre (Mod/Admin)",
+                "+warn <member_id> [reason] — Avertit un membre (Mod/Admin)",
                 "+warns <member_id> — Affiche les warns (Mod/Admin)",
                 "+unwarn <member_id> <num_warn> — Supprime un warn (Mod/Admin)",
                 "+purge <amount> — Supprime un nombre de messages (Mod/Admin)",
@@ -43,32 +43,33 @@ class HelpDropdown(Select):
             ],
             "Giveaway": [
                 "+gyrole <role> — Définir les rôles autorisés à lancer des giveaways (Admin)",
-                "+gyveaway <durée> <récompense> — Lancer un giveaway (Admin)",
+                "+gyveaway <duration> <reward> — Lancer un giveaway (Admin)",
                 "+gyend <msg_id> — Terminer un giveaway actif (Admin)",
                 "+gyrestart <msg_id> — Relancer un giveaway actif (Admin)"
             ],
             "Welcome / Verification": [
                 "+setupverify — Configurer la vérification par emoji (Admin)",
-                "+setwelcome <#salon> <message> — Configurer le welcome texte (Admin)",
-                "+setwelcomeembed <#salon> <title> <description> [thumbnail] [image] — Configurer le welcome en embed (Admin)",
+                "+setwelcome <#channel> <message> — Configurer le welcome texte (Admin)",
+                "+setwelcomeembed <#channel> <title> <description> [thumbnail] [image] — Configurer le welcome en embed (Admin)",
                 "+togglewelcome — Activer / désactiver le welcome (Admin)"
             ],
             "Logs": [
-                "🗑️ **on_message_delete / on_message_edit** — Logs des messages supprimés ou édités",
-                "📁 **on_guild_channel_create / delete / update** — Logs des salons",
-                "🔊 **on_voice_state_update** — Logs des vocaux (join / leave / move)",
-                "🔨 **on_member_ban / on_member_remove** — Logs des actions de modération",
-                "🎭 **on_member_update** — Logs des rôles ajoutés / retirés"
+                "+log_message #channel — Logs messages deleted/edited",
+                "+log_channel #channel — Logs channel creation/deletion/update",
+                "+log_vocal #channel — Logs voice actions (join/leave/move)",
+                "+log_mod #channel — Logs all moderation actions (ban/kick/timeout/etc.)",
+                "+log_role #channel — Logs role changes (add/remove/create/delete/permissions update)",
+                "+log_member #channel — Logs member updates (nickname and roles)"
             ],
             "MessageChannel": [
                 "+say <message> — Envoyer un message simple (Admin)",
                 "+sayembed <message> — Envoyer un message en embed (Admin)",
-                "+createchannel <nom> [text/voice] — Créer un salon (Admin)",
-                "+deletechannel <salon> — Supprimer un salon (Admin)"
+                "+createchannel <name> [text/voice] — Créer un salon (Admin)",
+                "+deletechannel <channel> — Supprimer un salon (Admin)"
             ],
             "Partenariat": [
-                "+setpartnerrole <role> — Configure le rôle partenaire (Propriétaire uniquement)",
-                "+setpartnerchannel <#salon> — Configure le channel partenaire (Propriétaire uniquement)"
+                "+setpartnerrole <role> — Configure le rôle partenaire (Owner uniquement)",
+                "+setpartnerchannel <#channel> — Configure le channel partenaire (Owner uniquement)"
             ],
             "Règlement": [
                 "+reglement — Configurer le règlement étape par étape (Admin)",
