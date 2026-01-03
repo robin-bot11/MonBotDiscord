@@ -32,7 +32,7 @@ class Giveaway(commands.Cog):
 
         time_seconds = self.convert_duration(durée)
         if time_seconds <= 0:
-            return await ctx.send("❌ Durée invalide ! Exemple : 1h, 30m, 45s")
+            return await ctx.send("❌ Durée invalide ! Exemple : 1j, 2h, 30m, 45s")
 
         embed = discord.Embed(
             title="🎉 Giveaway !",
@@ -117,14 +117,21 @@ class Giveaway(commands.Cog):
 
     # ------------------ HELPER ------------------
     def convert_duration(self, durée: str) -> int:
-        """Convertit une durée (1h, 30m, 45s) en secondes"""
+        """Convertit une durée comme 1j, 2heures, 30m, 45s en secondes"""
+        durée = durée.lower().strip()
         try:
-            if durée.endswith("h"):
-                return int(durée[:-1]) * 3600
-            elif durée.endswith("m"):
-                return int(durée[:-1]) * 60
-            elif durée.endswith("s"):
-                return int(durée[:-1])
+            if "jour" in durée or durée.endswith("j"):
+                number = int(''.join(filter(str.isdigit, durée)))
+                return number * 86400  # 24h en secondes
+            elif "heure" in durée or durée.endswith("h"):
+                number = int(''.join(filter(str.isdigit, durée)))
+                return number * 3600
+            elif "minute" in durée or durée.endswith("m"):
+                number = int(''.join(filter(str.isdigit, durée)))
+                return number * 60
+            elif "seconde" in durée or durée.endswith("s"):
+                number = int(''.join(filter(str.isdigit, durée)))
+                return number
         except:
             return 0
         return 0
