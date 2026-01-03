@@ -1,10 +1,9 @@
-# givax.py
 from discord.ext import commands
 import discord
 import asyncio
 import random
 from datetime import datetime, timedelta
-from storx import Database  # Changement ici
+from storx import Database
 
 COLOR = 0x6b00cb
 
@@ -39,14 +38,17 @@ class Giveaway(commands.Cog):
             color=COLOR
         )
         msg = await ctx.send(embed=embed)
+        await msg.add_reaction("🎉")
+
+        # Sauvegarde des données
         self.active_giveaways[msg.id] = {
             "reward": récompense,
             "author": ctx.author,
-            "end_time": datetime.utcnow() + timedelta(seconds=time_seconds)
+            "end_time": datetime.utcnow() + timedelta(seconds=time_seconds),
+            "channel": ctx.channel  # le canal pour l'annonce
         }
-        await msg.add_reaction("🎉")
-        await ctx.send(f"Le giveaway pour **{récompense}** est lancé ! Réagissez avec 🎉 pour participer.")
 
+        await ctx.send(f"Le giveaway pour **{récompense}** est lancé ! Réagissez avec 🎉 pour participer.")
         self.bot.loop.create_task(self.end_giveaway(msg.id, time_seconds))
 
     # ------------------ END GIVEAWAY ------------------
@@ -55,7 +57,8 @@ class Giveaway(commands.Cog):
         giveaway = self.active_giveaways.get(msg_id)
         if not giveaway:
             return
-        channel = giveaway['author'].guild.text_channels[0]
+
+        channel = giveaway["channel"]
         try:
             msg = await channel.fetch_message(msg_id)
         except:
@@ -80,6 +83,7 @@ class Giveaway(commands.Cog):
             await gagnant.send(f"Félicitations ! Tu as gagné le giveaway pour **{giveaway['reward']}** sur {channel.guild.name} !")
         except:
             pass
+
         self.active_giveaways.pop(msg_id, None)
 
     # ------------------ GYEND ------------------
@@ -99,9 +103,11 @@ class Giveaway(commands.Cog):
             return await ctx.send("Seuls les administrateurs peuvent relancer un giveaway.")
         if msg_id not in self.active_giveaways:
             return await ctx.send("Aucun giveaway actif avec cet ID.")
+
         durée_restante = (self.active_giveaways[msg_id]['end_time'] - datetime.utcnow()).total_seconds()
         if durée_restante < 0:
             durée_restante = 10
+
         await ctx.send(f"Le giveaway pour **{self.active_giveaways[msg_id]['reward']}** est relancé !")
         self.bot.loop.create_task(self.end_giveaway(msg_id, durée_restante))
 
