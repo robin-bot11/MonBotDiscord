@@ -1,8 +1,10 @@
 import json
 import os
 import shutil
+import time
 
 DB_FILE = "database.json"
+SNIPE_EXPIRATION = 86400  # 24 heures en secondes
 
 class Database:
     def __init__(self):
@@ -21,7 +23,7 @@ class Database:
                 }, f, indent=4, ensure_ascii=False)
         self.load()
 
-    # ------------------ Chargement et sauvegarde ------------------
+    # ------------------ Load / Save ------------------
     def load(self):
         with open(DB_FILE, "r", encoding="utf-8") as f:
             self.data = json.load(f)
@@ -149,3 +151,42 @@ class Database:
 
     def get_partner_channel(self, guild_id):
         return self.data.get("partner", {}).get(str(guild_id), {}).get("channel")
+
+    # ------------------ Snipes ------------------
+    def set_snipe(self, channel_id, data):
+        """Enregistre un snipe et écrase l'ancien"""
+        self.data.setdefault("snipes", {})
+        self.data["snipes"][str(channel_id)] = {
+            "author": data["author"],
+            "content": data["content"],
+            "timestamp": int(time.time())
+        }
+        self.save()
+
+    def get_snipe(self, channel_id):
+        """Récupère le snipe si valide, sinon None"""
+        snipes = self.data.get("snipes", {})
+        snipe = snipes.get(str(channel_id))
+
+        if not snipe:
+            return None
+
+        # Vérifie expiration
+        if int(time.time()) - snipe["timestamp"] > SNIPE_EXPIRATION:
+            del self.data["snipes"][str(channel_id)]
+            self.save()
+            return None
+
+        return snipe
+
+    def clear_all_snipes(self):
+        """Supprime tous les snipes globaux"""
+        self.data["snipes"] = {}
+        self.save()
+
+    def clear_guild_snipes(self, guild):
+        """Supprime tous les snipes du serveur"""
+        self.data.setdefault("snipes", {})
+        for channel in guild.text_channels:
+            self.data["snipes"].pop(str(channel.id), None)
+        self.save()
