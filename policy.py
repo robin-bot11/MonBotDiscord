@@ -1,6 +1,6 @@
-# policy.py
 from discord.ext import commands
 import discord
+import asyncio
 from storx import Database  # Assure-toi que c'est correct
 
 COLOR = 0x6b00cb
@@ -54,6 +54,7 @@ class Policy(commands.Cog):
             # Sauvegarde sécurisée dans la DB
             self.db.set_rule(ctx.guild.id, title, text, role_id, button_text, emoji, image)
             await ctx.send("✅ **Règlement configuré avec succès !**")
+
         except asyncio.TimeoutError:
             await ctx.send("⏱️ Temps écoulé, configuration annulée.")
         except Exception as e:
@@ -108,6 +109,7 @@ class Policy(commands.Cog):
     # -------------------- LISTENER RÔLE SUPPRIMÉ --------------------
     @commands.Cog.listener()
     async def on_guild_role_delete(self, role):
+        """Vérifie si un rôle lié au règlement a été supprimé et prévient le propriétaire."""
         try:
             for guild_id in self.db.get_all_rule_guilds():
                 data = self.db.get_rule(guild_id)
@@ -121,12 +123,15 @@ class Policy(commands.Cog):
                             await owner.send(
                                 f"⚠️ Le rôle d'acceptation du règlement (`{role.name}`) a été supprimé dans **{guild.name}**. Veuillez le reconfigurer."
                             )
-                        except:
+                        except discord.Forbidden:
                             pass
                     if guild.system_channel:
-                        await guild.system_channel.send(
-                            f"⚠️ Le rôle d'acceptation du règlement a été supprimé. Veuillez reconfigurer le règlement."
-                        )
+                        try:
+                            await guild.system_channel.send(
+                                "⚠️ Le rôle d'acceptation du règlement a été supprimé. Veuillez reconfigurer le règlement."
+                            )
+                        except discord.Forbidden:
+                            pass
                     # Supprime le rôle de la config DB
                     self.db.set_rule(guild.id, data["title"], data["text"], None, data["button"], data["emoji"], data["image"])
         except Exception:
