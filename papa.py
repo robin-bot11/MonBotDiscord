@@ -1,4 +1,3 @@
-# papa.py
 import discord
 from discord.ext import commands
 import asyncio
@@ -6,7 +5,6 @@ from datetime import datetime
 import traceback
 import psutil
 import os
-import time
 
 OWNER_ID = 1383790178522370058
 COLOR = 0x6b00cb
@@ -50,7 +48,7 @@ class Owner(commands.Cog):
             return False
         return True
 
-    # ---------------- COMMANDES DE BASE OWNER ----------------
+    # ---------------- COMMANDES OWNER ----------------
     @commands.command(name="owner_ping")
     async def owner_ping(self, ctx):
         """Ping du bot"""
@@ -66,12 +64,12 @@ class Owner(commands.Cog):
 
         embed = discord.Embed(
             title="💜 Menu d'aide Owner",
-            description="[ + ] 𝐑𝐨𝐛𝐢𝐧\nVoici toutes les commandes Owner/Créateur disponibles.\nUtilise le menu de sélection ci-dessous pour naviguer.",
+            description="[ + ] 𝐑𝐨𝐛𝐢𝐧\nVoici toutes les commandes Owner/Créateur disponibles.\nUtilise le menu ci-dessous pour naviguer.",
             color=COLOR
         )
 
-        # Récupère toutes les commandes Owner
-        owner_commands = [c for c in self.get_commands() if not c.hidden]
+        # Récupère toutes les commandes Owner (hors cachées)
+        owner_commands = [c for c in self.get_commands() if not c.hidden and c.name != "help.papa"]
 
         commands_text = ""
         for cmd in owner_commands:
@@ -79,10 +77,9 @@ class Owner(commands.Cog):
 
         embed.add_field(name="Owner Commands", value=commands_text or "Aucune commande trouvée", inline=False)
 
-        # Crée la vue avec dropdown
+        # Vue dropdown + accueil
         view = HelpOwnerView(self.bot)
 
-        # Envoie le message avec l'embed + view
         await ctx.send(embed=embed, view=view)
 
 
@@ -96,19 +93,18 @@ class HelpOwnerDropdown(discord.ui.Select):
         super().__init__(placeholder="Sélectionnez une catégorie", min_values=1, max_values=1, options=options)
 
     async def callback(self, interaction: discord.Interaction):
-        embed = discord.Embed(
-            title="💜 Menu d'aide Owner",
-            description="[ + ] 𝐑𝐨𝐛𝐢𝐧\nVoici toutes les commandes Owner/Créateur disponibles.",
-            color=COLOR
-        )
-
         owner_cog = interaction.client.get_cog("Owner")
-        owner_commands = [c for c in owner_cog.get_commands() if not c.hidden]
+        owner_commands = [c for c in owner_cog.get_commands() if not c.hidden and c.name != "help.papa"]
 
         commands_text = ""
         for cmd in owner_commands:
             commands_text += f"**+{cmd.name}** : {cmd.help or 'Pas de description'}\n"
 
+        embed = discord.Embed(
+            title="💜 Menu d'aide Owner",
+            description="[ + ] 𝐑𝐨𝐛𝐢𝐧\nToutes les commandes Owner/Créateur disponibles.",
+            color=COLOR
+        )
         embed.add_field(name="Owner Commands", value=commands_text or "Aucune commande trouvée", inline=False)
 
         view = HomeOwnerButtonView(self.bot)
@@ -133,7 +129,7 @@ class HomeOwnerButtonView(discord.ui.View):
     async def home_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         embed = discord.Embed(
             title="💜 Menu d'aide",
-            description="[ + ] 𝐑𝐨𝐛𝐢𝐧\n\n**Tu as fait +help ?**\n\nUtilise le menu de sélection ci-dessous pour choisir une catégorie.\nLes permissions requises sont indiquées pour chaque commande.",
+            description="[ + ] 𝐑𝐨𝐛𝐢𝐧\n\n**Tu as fait +help ?**\n\nUtilise le menu ci-dessous pour choisir une catégorie.\nLes permissions sont indiquées pour chaque commande.",
             color=COLOR
         )
         await interaction.response.edit_message(embed=embed, view=HelpOwnerView(self.bot))
