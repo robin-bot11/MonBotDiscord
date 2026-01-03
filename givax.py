@@ -13,6 +13,7 @@ class Giveaway(commands.Cog):
         self.db = Database()
         self.active_giveaways = {}  # msg_id : données du giveaway
 
+    # ------------------ GYROLE ------------------
     @commands.command()
     async def gyrole(self, ctx, *, role: discord.Role):
         """Définir un rôle autorisé à lancer des giveaways"""
@@ -21,20 +22,35 @@ class Giveaway(commands.Cog):
         self.db.add_gyrole(ctx.guild.id, role.id)
         await ctx.send(f"✅ Le rôle {role.name} peut maintenant lancer des giveaways.")
 
+    # ------------------ GYVEAWAY ------------------
     @commands.command()
-    async def gyveaway(self, ctx, durée: str, *, récompense: str):
-        """Lancer un giveaway. Exemple: +gyveaway 30s Nitro"""
+    async def gyveaway(self, ctx, *, args: str):
+        """
+        Lancer un giveaway.
+        Exemples :
+        +gyveaway 30s Nitro
+        +gyveaway 1jour Nitro
+        +gyveaway 2heures Nitro
+        """
         allowed_roles = self.db.get_gyroles(ctx.guild.id) or []
         if not any(r.id in allowed_roles for r in ctx.author.roles) and not ctx.author.guild_permissions.administrator:
             return await ctx.send("❌ Vous n'avez pas la permission de lancer un giveaway.")
 
-        time_seconds = self.convert_duration(durée)
+        # Séparer durée et récompense
+        split_args = args.strip().split(maxsplit=1)
+        if len(split_args) < 2:
+            return await ctx.send("❌ Format invalide. Exemple : +gyveaway 30s Nitro")
+
+        durée_str, récompense = split_args
+        time_seconds = self.convert_duration(durée_str)
         if time_seconds <= 0:
-            return await ctx.send("❌ Durée invalide ! Exemple : 1j, 2h, 30m, 45s")
+            return await ctx.send(
+                "❌ Durée invalide ! Exemple : 1j, 1jour, 2h, 2heures, 30m, 30minutes, 45s, 45secondes"
+            )
 
         embed = discord.Embed(
             title="🎉 Giveaway !",
-            description=f"Récompense : **{récompense}**\nLancé par : {ctx.author.mention}\nDurée : {durée}",
+            description=f"Récompense : **{récompense}**\nLancé par : {ctx.author.mention}\nDurée : {durée_str}",
             color=COLOR
         )
         msg = await ctx.send(embed=embed)
@@ -50,6 +66,7 @@ class Giveaway(commands.Cog):
         await ctx.send(f"✅ Le giveaway pour **{récompense}** est lancé ! Réagissez avec 🎉 pour participer.")
         self.bot.loop.create_task(self.end_giveaway(msg.id, time_seconds))
 
+    # ------------------ END GIVEAWAY ------------------
     async def end_giveaway(self, msg_id, delay):
         await asyncio.sleep(delay)
         giveaway = self.active_giveaways.get(msg_id)
@@ -84,8 +101,10 @@ class Giveaway(commands.Cog):
 
         self.active_giveaways.pop(msg_id, None)
 
+    # ------------------ GYEND ------------------
     @commands.command()
     async def gyend(self, ctx, msg_id: int):
+        """Terminer un giveaway manuellement"""
         if not ctx.author.guild_permissions.administrator:
             return await ctx.send("❌ Seuls les administrateurs peuvent terminer un giveaway manuellement.")
         if msg_id not in self.active_giveaways:
@@ -93,8 +112,10 @@ class Giveaway(commands.Cog):
         await self.end_giveaway(msg_id, 0)
         await ctx.send("✅ Le giveaway a été terminé manuellement.")
 
+    # ------------------ GYRESTART ------------------
     @commands.command()
     async def gyrestart(self, ctx, msg_id: int):
+        """Relancer un giveaway en cours"""
         if not ctx.author.guild_permissions.administrator:
             return await ctx.send("❌ Seuls les administrateurs peuvent relancer un giveaway.")
         if msg_id not in self.active_giveaways:
@@ -102,28 +123,33 @@ class Giveaway(commands.Cog):
 
         durée_restante = (self.active_giveaways[msg_id]['end_time'] - datetime.utcnow()).total_seconds()
         if durée_restante < 0:
-            durée_restante = 10
+            durée_restante = 10  # fallback
 
         await ctx.send(f"✅ Le giveaway pour **{self.active_giveaways[msg_id]['reward']}** est relancé !")
         self.bot.loop.create_task(self.end_giveaway(msg_id, durée_restante))
 
+    # ------------------ HELPER ------------------
     def convert_duration(self, durée: str) -> int:
-        """Convertit une durée comme 1j, 2heures, 30m, 45s en secondes"""
+        """Convertit une durée comme 1j, 1jour, 2h, 2heures, 30m, 30minutes, 45s, 45secondes en secondes"""
         durée = durée.lower().strip()
-        try:
-            # Extraire le nombre
-            number = int(''.join(filter(str.isdigit, durée)))
-            if any(x in durée for x in ["jour", "jours", "j"]):
-                return number * 86400
-            elif any(x in durée for x in ["heure", "heures", "h"]):
-                return number * 3600
-            elif any(x in durée for x in ["minute", "minutes", "m"]):
-                return number * 60
-            elif any(x in durée for x in ["seconde", "secondes", "s"]):
-                return number
-        except:
+        number = ''.join(filter(str.isdigit, durée))
+        if not number:
             return 0
-        return 0
 
+        number = int(number)
+
+        # Détection de l'unité
+        if any(x in durée for x in ["jour", "jours", "j"]):
+            return number * 86400
+        elif any(x in durée for x in ["heure", "heures", "h"]):
+            return number * 3600
+        elif any(x in durée for x in ["minute", "minutes", "m"]):
+            return number * 60
+        elif any(x in durée for x in ["seconde", "secondes", "s"]):
+            return number
+        else:
+            return 0
+
+# ------------------ SETUP ------------------
 async def setup(bot):
     await bot.add_cog(Giveaway(bot))
