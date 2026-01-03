@@ -1,4 +1,3 @@
-# joinbot.py
 import discord
 from discord.ext import commands
 from discord.ui import View, Button, Select
@@ -111,16 +110,20 @@ class WelcomeVerification(commands.Cog):
 
         # Enregistrement DB
         emoji = random.choice(EMOJIS)
-        msg = await ctx.send(embed=discord.Embed(title=title, description=description, color=COLOR_DEFAULT),
-                             view=VerificationView(emoji, None, role_valid, role_isolation, self.db, ctx.guild.id, button_text))
-        self.db.set_verification(guild_id,
-                                 role_valid=role_valid.id,
-                                 isolation_role=role_isolation.id if role_isolation else None,
-                                 title=title,
-                                 description=description,
-                                 button_text=button_text,
-                                 message_id=msg.id,
-                                 emoji=emoji)
+        msg = await ctx.send(
+            embed=discord.Embed(title=title, description=description, color=COLOR_DEFAULT),
+            view=VerificationView(emoji, None, role_valid, role_isolation, self.db, ctx.guild.id, button_text)
+        )
+        self.db.set_verification(
+            guild_id,
+            role_valid=role_valid.id,
+            isolation_role=role_isolation.id if role_isolation else None,
+            title=title,
+            description=description,
+            button_text=button_text,
+            message_id=msg.id,
+            emoji=emoji
+        )
 
         await ctx.send("✅ Système de vérification configuré.")
 
@@ -170,16 +173,17 @@ class WelcomeVerification(commands.Cog):
         if welcome_data.get("enabled", True):
             channel = member.guild.get_channel(welcome_data.get("channel"))
             if channel:
-                if welcome_data.get("embed"):
+                if welcome_data.get("embed_data"):
+                    embed_info = welcome_data["embed_data"]
                     embed = discord.Embed(
-                        title=welcome_data["embed"].get("title", "Bienvenue !"),
-                        description=welcome_data["embed"].get("description", "").replace("{user}", member.mention),
+                        title=embed_info.get("title", "Bienvenue !"),
+                        description=embed_info.get("description", "").replace("{user}", member.mention),
                         color=COLOR_DEFAULT
                     )
-                    if welcome_data["embed"].get("thumbnail"):
-                        embed.set_thumbnail(url=welcome_data["embed"]["thumbnail"])
-                    if welcome_data["embed"].get("image"):
-                        embed.set_image(url=welcome_data["embed"]["image"])
+                    if embed_info.get("thumbnail"):
+                        embed.set_thumbnail(url=embed_info["thumbnail"])
+                    if embed_info.get("image"):
+                        embed.set_image(url=embed_info["image"])
                     await channel.send(embed=embed)
                 else:
                     await channel.send(welcome_data.get("message", "").replace("{user}", member.mention))
