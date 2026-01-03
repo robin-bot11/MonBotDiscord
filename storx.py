@@ -19,7 +19,7 @@ class Database:
                     "rules": {},
                     "snipes": {},
                     "partner": {},
-                    "logs": {}
+                    "logs": {}  # <-- nouveau pour les logs
                 }, f, indent=4, ensure_ascii=False)
         self.load()
 
@@ -42,6 +42,18 @@ class Database:
             shutil.copy("backup.json", DB_FILE)
             self.load()
             print("✅ Base de données restaurée")
+
+    # ------------------ Logs ------------------
+    def set_log_channel(self, guild_id, log_type, channel_id):
+        """Configure le salon pour un type de log"""
+        self.data.setdefault("logs", {})
+        self.data["logs"].setdefault(str(guild_id), {})
+        self.data["logs"][str(guild_id)][log_type] = channel_id
+        self.save()
+
+    def get_log_channel(self, guild_id, log_type):
+        """Récupère le salon configuré pour un type de log"""
+        return self.data.get("logs", {}).get(str(guild_id), {}).get(log_type)
 
     # ------------------ Warns ------------------
     def add_warn(self, guild_id, member_id, reason, staff, date):
@@ -154,7 +166,6 @@ class Database:
 
     # ------------------ Snipes ------------------
     def set_snipe(self, channel_id, data):
-        """Enregistre un snipe et écrase l'ancien"""
         self.data.setdefault("snipes", {})
         self.data["snipes"][str(channel_id)] = {
             "author": data["author"],
@@ -164,28 +175,21 @@ class Database:
         self.save()
 
     def get_snipe(self, channel_id):
-        """Récupère le snipe si valide, sinon None"""
         snipes = self.data.get("snipes", {})
         snipe = snipes.get(str(channel_id))
-
         if not snipe:
             return None
-
-        # Vérifie expiration
         if int(time.time()) - snipe["timestamp"] > SNIPE_EXPIRATION:
             del self.data["snipes"][str(channel_id)]
             self.save()
             return None
-
         return snipe
 
     def clear_all_snipes(self):
-        """Supprime tous les snipes globaux"""
         self.data["snipes"] = {}
         self.save()
 
     def clear_guild_snipes(self, guild):
-        """Supprime tous les snipes du serveur"""
         self.data.setdefault("snipes", {})
         for channel in guild.text_channels:
             self.data["snipes"].pop(str(channel.id), None)
