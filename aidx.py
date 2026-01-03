@@ -43,13 +43,14 @@ class HelpView(discord.ui.View):
             color=COLOR
         )
 
-        if not cog or not cog.get_commands():
+        if not cog or not any(cmd for cmd in cog.get_commands() if not cmd.hidden and cmd.enabled and not getattr(cmd, "owner_only", False)):
             embed.description = "⚠️ Pas de commandes disponibles pour ce cog."
         else:
             for cmd in cog.get_commands():
                 if cmd.hidden or not cmd.enabled or getattr(cmd, "owner_only", False):
                     continue
-                desc = cmd.help or "Pas de description"
+                # Description automatique si help non défini
+                desc = cmd.help or f"Cette commande exécute `+{cmd.name}`."
                 embed.add_field(name=f"+{cmd.name}", value=desc, inline=False)
 
         await interaction.response.edit_message(embed=embed, view=self)
@@ -84,10 +85,8 @@ class Help(commands.Cog):
         options = []
         for cog_name in sorted(COG_INFO, key=lambda x: COG_INFO[x]["priority"]):
             cog = self.bot.get_cog(cog_name)
-            if cog and any(cmd for cmd in cog.get_commands() if not cmd.hidden and cmd.enabled and not getattr(cmd, "owner_only", False)):
-                description = f"Commandes {cog_name}"
-            else:
-                description = "Pas de commandes disponibles"
+            has_cmds = any(cmd for cmd in cog.get_commands() if not cmd.hidden and cmd.enabled and not getattr(cmd, "owner_only", False)) if cog else False
+            description = f"Commandes {cog_name}" if has_cmds else "Pas de commandes disponibles"
             options.append(
                 discord.SelectOption(
                     label=cog_name,
