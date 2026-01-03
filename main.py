@@ -5,13 +5,16 @@ import logging
 import asyncio
 import os
 
+from database import Database  # Assure-toi que database.py est présent
+
 # ---------------- CONFIG ----------------
 JETON_DISCORD = os.getenv("JETON_DISCORD")  # Utilisé sur Railway
 PREFIX = "+"
 intents = discord.Intents.all()
 
-# Désactivation du help par défaut
+# ---------------- BOT ----------------
 bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
+bot.db = Database()  # Instance unique de Database injectée dans le bot
 
 # ---------------- LOGGING ----------------
 logging.basicConfig(
@@ -20,20 +23,20 @@ logging.basicConfig(
 )
 
 # ---------------- COGS ----------------
-# Noms exacts des fichiers .py existants
 cogs = [
     "funx",
     "givax",
     "aidx",
     "charlie3",
-    "moderation",       # Vérifie que database.py est présent
+    "moderation",
     "delta4",
     "message_channel",
-    "policy",           # Remplace 'politique'
+    "policy",
     "snipe",
-    "partnership",      # Remplace 'partenariat'
+    "partnership",
     "joinbot",
-    "logx"
+    "logx",
+    "help"  # Toujours charger le help en dernier
 ]
 
 # ---------------- ÉVÉNEMENTS ----------------
@@ -76,7 +79,10 @@ async def main():
         return
 
     async with bot:
+        # Charge tous les cogs avant de démarrer
         await load_cogs()
+
+        # Démarrage du bot
         try:
             await bot.start(JETON_DISCORD)
         except discord.LoginFailure:
