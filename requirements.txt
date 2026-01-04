@@ -1,20 +1,5 @@
-# Discord API
 discord.py==2.6.0
-
-# Support audio pour vocal (PyNaCl requis par discord.py)
 PyNaCl==1.5.0
-
-# Requêtes HTTP asynchrones pour discord.py
 aiohttp==3.9.4
-
-# Gestion avancée des logs
-loguru==0.7.0
-
-# Gestion des variables d'environnement (token, configs)
-python-dotenv==1.0.0
-
-# Informations système pour delta4.py
 psutil==5.9.5
-
-# PostgreSQL asynchrone pour le bot
 asyncpg==0.31.0
