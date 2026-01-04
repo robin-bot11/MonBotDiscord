@@ -1,4 +1,3 @@
-# main.py
 import os
 import logging
 import asyncio
@@ -13,22 +12,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 JETON_DISCORD = os.getenv("JETON_DISCORD")
-DATABASE_URL = os.getenv("DATABASE_URL")
 PREFIX = os.getenv("PREFIX", "+")
 BOT_COLOR = int(os.getenv("BOT_COLOR", "0x6b00cb"), 16)
 SUCCESS_COLOR = int(os.getenv("SUCCESS_COLOR", "0x00ff00"), 16)
 
 # ---------------- DATABASE ----------------
-from db_postgres import DatabasePG
+from storx import DatabasePG  # <-- ton nouveau fichier
 
 # ---------------- BOT ----------------
 intents = discord.Intents.all()
-bot = commands.Bot(
-    command_prefix=PREFIX,
-    intents=intents,
-    help_command=None
-)
-
+bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
 bot.db: DatabasePG | None = None
 
 # ---------------- LOGGING ----------------
@@ -94,12 +87,8 @@ async def start_bot():
         logging.critical("❌ JETON_DISCORD manquant")
         return
 
-    if not DATABASE_URL:
-        logging.critical("❌ DATABASE_URL manquant")
-        return
-
     logging.info("🔄 Connexion à PostgreSQL...")
-    bot.db = await DatabasePG.create(DATABASE_URL)
+    bot.db = await DatabasePG.create()  # <-- plus d'argument
     logging.info("✅ PostgreSQL prêt")
 
     for cog in COGS:
