@@ -1,0 +1,42 @@
+# fly.toml pour Robin-Bot1
+
+app = "robin-bot1"
+primary_region = "iad"  # Tu peux changer selon la région (ex: "cdg" pour Paris)
+
+[build]
+  image = "python:3.13"  # Image Docker Python
+  buildpacks = ["heroku/python"]
+
+[deploy]
+  # Branche GitHub à déployer
+  branch = "main"
+
+[env]
+# Variables d'environnement (à configurer dans Fly.io Secrets)
+JETON_DISCORD = ""
+DATABASE_URL = ""
+PREFIX = ""
+BOT_COLOR = ""
+SUCCESS_COLOR = ""
+SNIPE_EXPIRATION = ""
+
+[experimental]
+  auto_rollback = true
+
+[[services]]
+  internal_port = 8080  # Port interne pour le container (pas besoin d'exposer pour un bot Discord)
+  protocol = "tcp"
+
+  [[services.ports]]
+    port = 80
+    handlers = ["tls", "http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [[services.tcp_checks]]
+    interval = 10000
+    timeout = 2000
+    grace_period = "10s"
+    restart_limit = 0
