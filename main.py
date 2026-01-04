@@ -1,23 +1,30 @@
 # main.py
-import discord
-from discord.ext import commands
+import os
 import logging
 import asyncio
-import os
 import importlib.util
 
-# ---------------- DATABASE ----------------
-from db_postgres import DatabasePG  # notre nouveau fichier PostgreSQL
+import discord
+from discord.ext import commands
+from dotenv import load_dotenv
 
-# ---------------- CONFIG ----------------
+# ---------------- ENV ----------------
+load_dotenv()  # Charge automatiquement le fichier .env
+
 JETON_DISCORD = os.getenv("JETON_DISCORD")
 DATABASE_URL = os.getenv("DATABASE_URL") or "postgres://user:password@host:port/database"
-PREFIX = "+"
-intents = discord.Intents.all()
+PREFIX = os.getenv("PREFIX") or "+"
+BOT_COLOR = int(os.getenv("BOT_COLOR", "0x6b00cb"), 16)       # violet principal
+SUCCESS_COLOR = int(os.getenv("SUCCESS_COLOR", "0x00ff00"), 16)  # vert pour succès
+SNIPE_EXPIRATION = int(os.getenv("SNIPE_EXPIRATION", 86400))   # 24h en secondes
+
+# ---------------- DATABASE ----------------
+from db_postgres import DatabasePG
 
 # ---------------- BOT ----------------
+intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
-bot.db = None  # sera initialisé après création du pool
+bot.db = None  # sera initialisé plus tard avec PostgreSQL
 
 # ---------------- LOGGING ----------------
 logging.basicConfig(
