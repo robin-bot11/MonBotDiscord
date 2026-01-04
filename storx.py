@@ -6,7 +6,6 @@ import ssl
 
 log = logging.getLogger(__name__)
 
-
 class DatabasePG:
     def __init__(self, pool: asyncpg.Pool):
         self.pool = pool
@@ -17,13 +16,12 @@ class DatabasePG:
     @classmethod
     async def create(cls):
         database_url = os.getenv("DATABASE_URL")
-
         if not database_url:
             raise RuntimeError("❌ DATABASE_URL manquant dans l'environnement")
 
         log.info("🔄 Connexion à PostgreSQL...")
 
-        # Création du contexte SSL pour Supabase
+        # SSL pour Supabase
         ssl_context = ssl.create_default_context()
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
@@ -33,7 +31,7 @@ class DatabasePG:
             min_size=1,
             max_size=5,
             command_timeout=60,
-            ssl=ssl_context  # ✅ SSL activé pour Supabase
+            ssl=ssl_context
         )
 
         self = cls(pool)
