@@ -6,18 +6,15 @@ import signal
 
 import discord
 from discord.ext import commands
-from dotenv import load_dotenv
 
 # ---------------- ENV ----------------
-load_dotenv()
-
 JETON_DISCORD = os.getenv("JETON_DISCORD")
 PREFIX = os.getenv("PREFIX", "+")
 BOT_COLOR = int(os.getenv("BOT_COLOR", "0x6b00cb"), 16)
 SUCCESS_COLOR = int(os.getenv("SUCCESS_COLOR", "0x00ff00"), 16)
 
 # ---------------- DATABASE ----------------
-from storx import DatabasePG  # <-- ton nouveau fichier
+from storx import DatabasePG
 
 # ---------------- BOT ----------------
 intents = discord.Intents.all()
@@ -88,7 +85,7 @@ async def start_bot():
         return
 
     logging.info("🔄 Connexion à PostgreSQL...")
-    bot.db = await DatabasePG.create()  # <-- plus d'argument
+    bot.db = await DatabasePG.create()
     logging.info("✅ PostgreSQL prêt")
 
     for cog in COGS:
@@ -99,14 +96,12 @@ async def start_bot():
 # ---------------- SHUTDOWN ----------------
 async def shutdown():
     logging.info("🛑 Arrêt du bot...")
-
     try:
         if bot.db:
             await bot.db.close()
             logging.info("✅ PostgreSQL fermé")
     except Exception as e:
         logging.error(f"Erreur fermeture DB: {e}")
-
     await bot.close()
 
 # ---------------- MAIN ----------------
