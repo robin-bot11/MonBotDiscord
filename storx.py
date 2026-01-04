@@ -1,196 +1,281 @@
-import json
+# db_postgres.py
+import asyncpg
 import os
-import shutil
-import time
+import asyncio
+from datetime import datetime
 
-DB_FILE = "database.json"
-SNIPE_EXPIRATION = 86400  # 24 heures en secondes
+# ---------------- CONFIG ----------------
+SNIPE_EXPIRATION = int(os.getenv("SNIPE_EXPIRATION", 86400))  # 24h par défaut
 
-class Database:
-    def __init__(self):
-        if not os.path.exists(DB_FILE):
-            with open(DB_FILE, "w", encoding="utf-8") as f:
-                json.dump({
-                    "warns": {},
-                    "welcome": {},
-                    "verification": {},
-                    "gyroles": {},
-                    "lock_roles": {},
-                    "rules": {},
-                    "snipes": {},
-                    "partner": {},
-                    "logs": {}  # <-- nouveau pour les logs
-                }, f, indent=4, ensure_ascii=False)
-        self.load()
+class DatabasePG:
+    """Gestion complète PostgreSQL pour le bot Discord."""
 
-    # ------------------ Load / Save ------------------
-    def load(self):
-        with open(DB_FILE, "r", encoding="utf-8") as f:
-            self.data = json.load(f)
+    def __init__(self, pool):
+        self.pool = pool
 
-    def save(self):
-        with open(DB_FILE, "w", encoding="utf-8") as f:
-            json.dump(self.data, f, indent=4, ensure_ascii=False)
+    @classmethod
+    async def create(cls, DATABASE_URL):
+        """Initialise le pool PostgreSQL et crée les tables si nécessaire."""
+        self = cls(await asyncpg.create_pool(DATABASE_URL))
 
-    # ------------------ Backup / Restore ------------------
-    def backup(self):
-        shutil.copy(DB_FILE, "backup.json")
-        print("✅ Base de données sauvegardée")
+        async with self.pool.acquire() as conn:
+            # WARN
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS warns (
+                guild_id BIGINT,
+                member_id BIGINT,
+                reason TEXT,
+                staff BIGINT,
+                date TIMESTAMP
+            );
+            """)
 
-    def restore(self):
-        if os.path.exists("backup.json"):
-            shutil.copy("backup.json", DB_FILE)
-            self.load()
-            print("✅ Base de données restaurée")
+            # MUTES
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS mutes (
+                guild_id BIGINT,
+                member_id BIGINT,
+                reason TEXT,
+                staff BIGINT,
+                date TIMESTAMP
+            );
+            """)
 
-    # ------------------ Logs ------------------
-    def set_log_channel(self, guild_id, log_type, channel_id):
-        """Configure le salon pour un type de log"""
-        self.data.setdefault("logs", {})
-        self.data["logs"].setdefault(str(guild_id), {})
-        self.data["logs"][str(guild_id)][log_type] = channel_id
-        self.save()
+            # LOGS
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS logs (
+                guild_id BIGINT,
+                log_type TEXT,
+                channel_id BIGINT,
+                PRIMARY KEY (guild_id, log_type)
+            );
+            """)
 
-    def get_log_channel(self, guild_id, log_type):
-        """Récupère le salon configuré pour un type de log"""
-        return self.data.get("logs", {}).get(str(guild_id), {}).get(log_type)
+            # WELCOME
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS welcome (
+                guild_id BIGINT PRIMARY KEY,
+                channel_id BIGINT,
+                message TEXT,
+                embed JSONB,
+                enabled BOOLEAN DEFAULT TRUE
+            );
+            """)
 
-    # ------------------ Warns ------------------
-    def add_warn(self, guild_id, member_id, reason, staff, date):
-        self.data.setdefault("warns", {})
-        self.data["warns"].setdefault(str(guild_id), {})
-        self.data["warns"][str(guild_id)].setdefault(str(member_id), [])
-        self.data["warns"][str(guild_id)][str(member_id)].append({
-            "reason": reason,
-            "staff": staff,
-            "date": date
-        })
-        self.save()
+            # VERIFICATION
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS verification (
+                guild_id BIGINT PRIMARY KEY,
+                role_valid BIGINT,
+                isolation_role BIGINT,
+                title TEXT,
+                description TEXT,
+                button_text TEXT,
+                message_id BIGINT,
+                emoji TEXT,
+                tries JSONB DEFAULT '{}'::jsonb
+            );
+            """)
 
-    def get_warns(self, guild_id, member_id):
-        return self.data.get("warns", {}).get(str(guild_id), {}).get(str(member_id), [])
+            # PARTNER
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS partner (
+                guild_id BIGINT PRIMARY KEY,
+                role_id BIGINT,
+                channel_id BIGINT
+            );
+            """)
 
-    def del_warn(self, guild_id, member_id, index):
-        guild_warns = self.data.get("warns", {}).get(str(guild_id), {})
-        if str(member_id) in guild_warns:
-            if 0 <= index < len(guild_warns[str(member_id)]):
-                del guild_warns[str(member_id)][index]
-                self.save()
-                return True
-        return False
+            # SNIPES
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS snipes (
+                channel_id BIGINT PRIMARY KEY,
+                author BIGINT,
+                content TEXT,
+                timestamp BIGINT
+            );
+            """)
 
-    # ------------------ Welcome ------------------
-    def set_welcome(self, guild_id, channel_id=None, message=None, embed_data=None, enabled=True):
-        self.data.setdefault("welcome", {})
-        self.data["welcome"][str(guild_id)] = {
-            "channel": channel_id,
-            "message": message,
-            "embed": embed_data,
-            "enabled": enabled
-        }
-        self.save()
+        return self
 
-    def toggle_welcome(self, guild_id):
-        guild_data = self.data.get("welcome", {}).get(str(guild_id))
-        if guild_data:
-            guild_data["enabled"] = not guild_data.get("enabled", True)
-            self.data["welcome"][str(guild_id)] = guild_data
-            self.save()
-            return guild_data["enabled"]
-        return None
+    # ---------------- LOGS ----------------
+    async def set_log_channel(self, guild_id, log_type, channel_id):
+        async with self.pool.acquire() as conn:
+            await conn.execute("""
+            INSERT INTO logs (guild_id, log_type, channel_id)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (guild_id, log_type) DO UPDATE SET channel_id = $3;
+            """, guild_id, log_type, channel_id)
 
-    def get_welcome(self, guild_id):
-        return self.data.get("welcome", {}).get(str(guild_id), {})
+    async def get_log_channel(self, guild_id, log_type):
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow("""
+            SELECT channel_id FROM logs WHERE guild_id = $1 AND log_type = $2;
+            """, guild_id, log_type)
+            return row["channel_id"] if row else None
 
-    # ------------------ Verification ------------------
-    def set_verification(
-        self,
-        guild_id,
-        role_valid,
-        isolation_role=None,
-        title=None,
-        description=None,
-        button_text=None,
-        message_id=None,
-        emoji=None
-    ):
-        self.data.setdefault("verification", {})
-        self.data["verification"][str(guild_id)] = {
-            "role_valid": role_valid,
-            "isolation_role": isolation_role,
-            "title": title,
-            "description": description,
-            "button_text": button_text,
-            "message_id": message_id,
-            "emoji": emoji,
-            "tries": {}
-        }
-        self.save()
+    # ---------------- WARNS ----------------
+    async def add_warn(self, guild_id, member_id, reason, staff):
+        async with self.pool.acquire() as conn:
+            await conn.execute("""
+            INSERT INTO warns (guild_id, member_id, reason, staff, date)
+            VALUES ($1, $2, $3, $4, $5);
+            """, guild_id, member_id, reason, staff, datetime.utcnow())
 
-    def get_verification(self, guild_id):
-        return self.data.get("verification", {}).get(str(guild_id), {})
+    async def get_warns(self, guild_id, member_id):
+        async with self.pool.acquire() as conn:
+            return await conn.fetch("""
+            SELECT * FROM warns WHERE guild_id = $1 AND member_id = $2 ORDER BY date;
+            """, guild_id, member_id)
 
-    def add_try(self, guild_id, member_id):
-        self.data.setdefault("verification", {})
-        self.data["verification"].setdefault(str(guild_id), {})
-        self.data["verification"][str(guild_id)].setdefault("tries", {})
-        tries = self.data["verification"][str(guild_id)]["tries"].get(str(member_id), 0) + 1
-        self.data["verification"][str(guild_id)]["tries"][str(member_id)] = tries
-        self.save()
-        return tries
+    async def del_warn(self, guild_id, member_id, warn_index):
+        async with self.pool.acquire() as conn:
+            result = await conn.execute("""
+            DELETE FROM warns
+            WHERE ctid = (SELECT ctid FROM warns
+                          WHERE guild_id = $1 AND member_id = $2
+                          ORDER BY date OFFSET $3 LIMIT 1);
+            """, guild_id, member_id, warn_index)
+            return result.endswith("1")
 
-    def reset_tries(self, guild_id, member_id):
-        self.data.setdefault("verification", {})
-        self.data["verification"].setdefault(str(guild_id), {})
-        self.data["verification"][str(guild_id)]["tries"][str(member_id)] = 0
-        self.save()
+    # ---------------- MUTES ----------------
+    async def add_mute(self, guild_id, member_id, reason, staff):
+        async with self.pool.acquire() as conn:
+            await conn.execute("""
+            INSERT INTO mutes (guild_id, member_id, reason, staff, date)
+            VALUES ($1, $2, $3, $4, $5);
+            """, guild_id, member_id, reason, staff, datetime.utcnow())
 
-    # ------------------ Partner ------------------
-    def set_partner_role(self, guild_id, role_id):
-        self.data.setdefault("partner", {})
-        self.data["partner"].setdefault(str(guild_id), {})
-        self.data["partner"][str(guild_id)]["role"] = role_id
-        self.save()
+    async def get_mutes(self, guild_id, member_id):
+        async with self.pool.acquire() as conn:
+            return await conn.fetch("""
+            SELECT * FROM mutes WHERE guild_id = $1 AND member_id = $2 ORDER BY date;
+            """, guild_id, member_id)
 
-    def get_partner_role(self, guild_id):
-        return self.data.get("partner", {}).get(str(guild_id), {}).get("role")
+    async def remove_mute(self, guild_id, member_id):
+        async with self.pool.acquire() as conn:
+            await conn.execute("""
+            DELETE FROM mutes WHERE guild_id = $1 AND member_id = $2;
+            """, guild_id, member_id)
 
-    def set_partner_channel(self, guild_id, channel_id):
-        self.data.setdefault("partner", {})
-        self.data["partner"].setdefault(str(guild_id), {})
-        self.data["partner"][str(guild_id)]["channel"] = channel_id
-        self.save()
+    # ---------------- WELCOME ----------------
+    async def set_welcome(self, guild_id, channel_id=None, message=None, embed_data=None, enabled=True):
+        async with self.pool.acquire() as conn:
+            await conn.execute("""
+            INSERT INTO welcome (guild_id, channel_id, message, embed, enabled)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (guild_id) DO UPDATE SET
+            channel_id = $2, message = $3, embed = $4, enabled = $5;
+            """, guild_id, channel_id, message, embed_data, enabled)
 
-    def get_partner_channel(self, guild_id):
-        return self.data.get("partner", {}).get(str(guild_id), {}).get("channel")
+    async def get_welcome(self, guild_id):
+        async with self.pool.acquire() as conn:
+            return await conn.fetchrow("""
+            SELECT * FROM welcome WHERE guild_id = $1;
+            """, guild_id)
 
-    # ------------------ Snipes ------------------
-    def set_snipe(self, channel_id, data):
-        self.data.setdefault("snipes", {})
-        self.data["snipes"][str(channel_id)] = {
-            "author": data["author"],
-            "content": data["content"],
-            "timestamp": int(time.time())
-        }
-        self.save()
+    # ---------------- VERIFICATION ----------------
+    async def set_verification(self, guild_id, role_valid, isolation_role=None,
+                               title=None, description=None, button_text=None,
+                               message_id=None, emoji=None):
+        async with self.pool.acquire() as conn:
+            await conn.execute("""
+            INSERT INTO verification
+            (guild_id, role_valid, isolation_role, title, description,
+             button_text, message_id, emoji)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+            ON CONFLICT (guild_id) DO UPDATE SET
+            role_valid=$2, isolation_role=$3, title=$4, description=$5,
+            button_text=$6, message_id=$7, emoji=$8;
+            """, guild_id, role_valid, isolation_role, title, description,
+                 button_text, message_id, emoji)
 
-    def get_snipe(self, channel_id):
-        snipes = self.data.get("snipes", {})
-        snipe = snipes.get(str(channel_id))
-        if not snipe:
-            return None
-        if int(time.time()) - snipe["timestamp"] > SNIPE_EXPIRATION:
-            del self.data["snipes"][str(channel_id)]
-            self.save()
-            return None
-        return snipe
+    async def get_verification(self, guild_id):
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow("""
+            SELECT * FROM verification WHERE guild_id = $1;
+            """, guild_id)
+            if row:
+                # Convert tries JSONB en dict
+                row = dict(row)
+                if row["tries"] is None:
+                    row["tries"] = {}
+            return row
 
-    def clear_all_snipes(self):
-        self.data["snipes"] = {}
-        self.save()
+    async def add_try(self, guild_id, member_id):
+        async with self.pool.acquire() as conn:
+            tries = await conn.fetchval("""
+            SELECT tries->>$2 FROM verification WHERE guild_id=$1;
+            """, guild_id, str(member_id))
+            tries = int(tries) + 1 if tries else 1
+            await conn.execute("""
+            UPDATE verification
+            SET tries = jsonb_set(tries, $2::text[], $3::jsonb)
+            WHERE guild_id = $1;
+            """, guild_id, f'{{{member_id}}}', str(tries))
+            return tries
 
-    def clear_guild_snipes(self, guild):
-        self.data.setdefault("snipes", {})
-        for channel in guild.text_channels:
-            self.data["snipes"].pop(str(channel.id), None)
-        self.save()
+    async def reset_tries(self, guild_id, member_id):
+        async with self.pool.acquire() as conn:
+            await conn.execute("""
+            UPDATE verification
+            SET tries = jsonb_set(tries, $2::text[], '0')
+            WHERE guild_id = $1;
+            """, guild_id, f'{{{member_id}}}')
+
+    # ---------------- PARTNER ----------------
+    async def set_partner_role(self, guild_id, role_id):
+        async with self.pool.acquire() as conn:
+            await conn.execute("""
+            INSERT INTO partner (guild_id, role_id)
+            VALUES ($1, $2)
+            ON CONFLICT (guild_id) DO UPDATE SET role_id=$2;
+            """, guild_id, role_id)
+
+    async def get_partner_role(self, guild_id):
+        async with self.pool.acquire() as conn:
+            return await conn.fetchval("""
+            SELECT role_id FROM partner WHERE guild_id=$1;
+            """, guild_id)
+
+    async def set_partner_channel(self, guild_id, channel_id):
+        async with self.pool.acquire() as conn:
+            await conn.execute("""
+            INSERT INTO partner (guild_id, channel_id)
+            VALUES ($1, $2)
+            ON CONFLICT (guild_id) DO UPDATE SET channel_id=$2;
+            """, guild_id, channel_id)
+
+    async def get_partner_channel(self, guild_id):
+        async with self.pool.acquire() as conn:
+            return await conn.fetchval("""
+            SELECT channel_id FROM partner WHERE guild_id=$1;
+            """, guild_id)
+
+    # ---------------- SNIPES ----------------
+    async def set_snipe(self, channel_id, author_id, content):
+        async with self.pool.acquire() as conn:
+            await conn.execute("""
+            INSERT INTO snipes (channel_id, author, content, timestamp)
+            VALUES ($1,$2,$3,$4)
+            ON CONFLICT (channel_id) DO UPDATE SET author=$2, content=$3, timestamp=$4;
+            """, channel_id, author_id, content, int(datetime.utcnow().timestamp()))
+
+    async def get_snipe(self, channel_id):
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow("""
+            SELECT * FROM snipes WHERE channel_id=$1;
+            """, channel_id)
+            if not row:
+                return None
+            if int(datetime.utcnow().timestamp()) - row["timestamp"] > SNIPE_EXPIRATION:
+                await conn.execute("DELETE FROM snipes WHERE channel_id=$1;", channel_id)
+                return None
+            return row
+
+    async def clear_guild_snipes(self, guild):
+        async with self.pool.acquire() as conn:
+            channels = [c.id for c in guild.text_channels]
+            await conn.execute("""
+            DELETE FROM snipes WHERE channel_id = ANY($1::bigint[]);
+            """, channels)
