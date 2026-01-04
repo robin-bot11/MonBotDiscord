@@ -7,16 +7,17 @@ import os
 import importlib.util
 
 # ---------------- DATABASE ----------------
-from storx import Database
+from db_postgres import DatabasePG  # notre nouveau fichier PostgreSQL
 
 # ---------------- CONFIG ----------------
 JETON_DISCORD = os.getenv("JETON_DISCORD")
+DATABASE_URL = os.getenv("DATABASE_URL") or "postgres://user:password@host:port/database"
 PREFIX = "+"
 intents = discord.Intents.all()
 
 # ---------------- BOT ----------------
 bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
-bot.db = Database()  # Instance unique injectée dans le bot
+bot.db = None  # sera initialisé après création du pool
 
 # ---------------- LOGGING ----------------
 logging.basicConfig(
@@ -25,7 +26,6 @@ logging.basicConfig(
 )
 
 # ---------------- COGS ----------------
-# ⚠️ uniquement les fichiers existants
 cogs = [
     "funx",
     "givax",
@@ -93,13 +93,18 @@ async def load_cogs():
         await safe_load_extension(cog)
         ext = bot.get_cog(cog.capitalize())
         if ext and hasattr(ext, "db"):
-            ext.db = bot.db
+            ext.db = bot.db  # injecte l'instance PostgreSQL
 
 # ---------------- MAIN ----------------
 async def main():
     if not JETON_DISCORD:
         logging.critical("❌ Jeton Discord manquant !")
         return
+
+    # Initialisation PostgreSQL
+    logging.info("🔄 Connexion à PostgreSQL...")
+    bot.db = await DatabasePG.create(DATABASE_URL)
+    logging.info("✅ PostgreSQL connecté et tables prêtes")
 
     async with bot:
         await load_cogs()
