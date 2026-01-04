@@ -11,17 +11,16 @@ class DatabasePG:
         self.pool = pool
 
     # =========================
-    # INIT / CONNEXION
+    # INIT
     # =========================
     @classmethod
     async def create(cls):
         database_url = os.getenv("DATABASE_URL")
         if not database_url:
-            raise RuntimeError("❌ DATABASE_URL manquant dans l'environnement")
+            raise RuntimeError("DATABASE_URL manquant")
 
-        log.info("🔄 Connexion à PostgreSQL...")
+        log.info("Connexion PostgreSQL...")
 
-        # SSL pour Supabase
         ssl_context = ssl.create_default_context()
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
@@ -30,14 +29,13 @@ class DatabasePG:
             dsn=database_url,
             min_size=1,
             max_size=5,
-            command_timeout=60,
             ssl=ssl_context
         )
 
         self = cls(pool)
         await self._init_tables()
 
-        log.info("✅ PostgreSQL prêt")
+        log.info("PostgreSQL prêt")
         return self
 
     async def close(self):
@@ -86,7 +84,7 @@ class DatabasePG:
             """, guild_id, channel_id)
 
     # =========================
-    # CLEANUP AUTOMATIQUE
+    # CLEANUP
     # =========================
     async def cleanup_snipes(self):
         expiration = int(os.getenv("SNIPE_EXPIRATION", 86400))
@@ -97,7 +95,7 @@ class DatabasePG:
             """, expiration)
 
     # =========================
-    # UTILS
+    # PING
     # =========================
     async def ping(self) -> bool:
         try:
