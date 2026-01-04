@@ -8,10 +8,12 @@ import discord
 from discord.ext import commands
 
 # ---------------- ENV ----------------
+# Lecture des secrets depuis l'environnement Fly.io
 JETON_DISCORD = os.getenv("JETON_DISCORD")
 PREFIX = os.getenv("PREFIX", "+")
 BOT_COLOR = int(os.getenv("BOT_COLOR", "0x6b00cb"), 16)
 SUCCESS_COLOR = int(os.getenv("SUCCESS_COLOR", "0x00ff00"), 16)
+SNIPE_EXPIRATION = int(os.getenv("SNIPE_EXPIRATION", 86400))
 
 # ---------------- DATABASE ----------------
 from storx import DatabasePG
@@ -85,7 +87,7 @@ async def start_bot():
         return
 
     logging.info("🔄 Connexion à PostgreSQL...")
-    bot.db = await DatabasePG.create()
+    bot.db = await DatabasePG.create()  # Les secrets DATABASE_URL sont lus directement depuis l'environnement
     logging.info("✅ PostgreSQL prêt")
 
     for cog in COGS:
