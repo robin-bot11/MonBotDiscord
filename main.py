@@ -3,28 +3,33 @@ import os
 import logging
 import asyncio
 import importlib.util
+import signal
 
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
 # ---------------- ENV ----------------
-load_dotenv()  # Charge automatiquement le fichier .env
+load_dotenv()
 
 JETON_DISCORD = os.getenv("JETON_DISCORD")
-DATABASE_URL = os.getenv("DATABASE_URL") or "postgres://user:password@host:port/database"
-PREFIX = os.getenv("PREFIX") or "+"
-BOT_COLOR = int(os.getenv("BOT_COLOR", "0x6b00cb"), 16)       # violet principal
-SUCCESS_COLOR = int(os.getenv("SUCCESS_COLOR", "0x00ff00"), 16)  # vert pour succès
-SNIPE_EXPIRATION = int(os.getenv("SNIPE_EXPIRATION", 86400))   # 24h en secondes
+DATABASE_URL = os.getenv("DATABASE_URL")
+PREFIX = os.getenv("PREFIX", "+")
+BOT_COLOR = int(os.getenv("BOT_COLOR", "0x6b00cb"), 16)
+SUCCESS_COLOR = int(os.getenv("SUCCESS_COLOR", "0x00ff00"), 16)
 
 # ---------------- DATABASE ----------------
 from db_postgres import DatabasePG
 
 # ---------------- BOT ----------------
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
-bot.db = None  # sera initialisé plus tard avec PostgreSQL
+bot = commands.Bot(
+    command_prefix=PREFIX,
+    intents=intents,
+    help_command=None
+)
+
+bot.db: DatabasePG | None = None
 
 # ---------------- LOGGING ----------------
 logging.basicConfig(
@@ -33,7 +38,7 @@ logging.basicConfig(
 )
 
 # ---------------- COGS ----------------
-cogs = [
+COGS = [
     "funx",
     "givax",
     "aidx",
@@ -44,84 +49,96 @@ cogs = [
     "snipe",
     "joinbot",
     "logx",
-    "papa"  # Owner commands, toujours en dernier
+    "papa"
 ]
 
 # ---------------- UTIL ----------------
 async def safe_load_extension(cog_name: str):
     try:
         if not importlib.util.find_spec(cog_name):
-            logging.warning(f"❌ {cog_name}.py introuvable, passage au suivant")
-            return False
+            logging.warning(f"❌ {cog_name}.py introuvable")
+            return
 
         await bot.load_extension(cog_name)
-        logging.info(f"✅ {cog_name} chargé ✅")
-        return True
+        logging.info(f"✅ {cog_name} chargé")
+
+        cog = bot.get_cog(cog_name.capitalize())
+        if cog and hasattr(cog, "db"):
+            cog.db = bot.db
 
     except commands.ExtensionAlreadyLoaded:
-        logging.warning(f"{cog_name} déjà chargé")
-        return True
+        logging.warning(f"⚠️ {cog_name} déjà chargé")
     except Exception as e:
-        logging.error(f"❌ Erreur en chargeant {cog_name} : {e}")
-        return False
+        logging.error(f"❌ Erreur chargement {cog_name} : {e}")
 
-# ---------------- ÉVÉNEMENTS ----------------
+# ---------------- EVENTS ----------------
 @bot.event
 async def on_ready():
-    logging.info(f"[+] {bot.user} connecté et prêt !")
-    for guild in bot.guilds:
-        bot.loop.create_task(fallback_audit_logs(guild))
+    logging.info(f"🤖 Connecté en tant que {bot.user} ({bot.user.id})")
 
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
-        await ctx.send("❌ Vous n'avez pas la permission d'exécuter cette commande.")
+        await ctx.send("❌ Vous n'avez pas la permission.")
     elif isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send(f"❌ Argument manquant : {error.param}")
+        await ctx.send(f"❌ Argument manquant : {error.param.name}")
     elif isinstance(error, commands.CommandNotFound):
-        pass
+        return
     else:
-        logging.error(f"❌ Erreur inattendue : {error}")
+        logging.exception("Erreur commande")
         await ctx.send("❌ Une erreur est survenue.")
 
-# ---------------- FALLBACK AUDIT LOGS ----------------
-async def fallback_audit_logs(guild):
-    while True:
-        try:
-            async for _ in guild.audit_logs(limit=5):
-                pass
-        except Exception as e:
-            logging.warning(f"⚠️ Audit logs fallback failed: {e}")
-        await asyncio.sleep(10)
-
-# ---------------- CHARGEMENT DES COGS ----------------
-async def load_cogs():
-    for cog in cogs:
-        await safe_load_extension(cog)
-        ext = bot.get_cog(cog.capitalize())
-        if ext and hasattr(ext, "db"):
-            ext.db = bot.db  # injecte l'instance PostgreSQL
-
-# ---------------- MAIN ----------------
-async def main():
+# ---------------- STARTUP ----------------
+async def start_bot():
     if not JETON_DISCORD:
-        logging.critical("❌ Jeton Discord manquant !")
+        logging.critical("❌ JETON_DISCORD manquant")
         return
 
-    # Initialisation PostgreSQL
+    if not DATABASE_URL:
+        logging.critical("❌ DATABASE_URL manquant")
+        return
+
     logging.info("🔄 Connexion à PostgreSQL...")
     bot.db = await DatabasePG.create(DATABASE_URL)
-    logging.info("✅ PostgreSQL connecté et tables prêtes")
+    logging.info("✅ PostgreSQL prêt")
 
-    async with bot:
-        await load_cogs()
-        await bot.start(JETON_DISCORD)
+    for cog in COGS:
+        await safe_load_extension(cog)
+
+    await bot.start(JETON_DISCORD)
+
+# ---------------- SHUTDOWN ----------------
+async def shutdown():
+    logging.info("🛑 Arrêt du bot...")
+
+    try:
+        if bot.db:
+            await bot.db.close()
+            logging.info("✅ PostgreSQL fermé")
+    except Exception as e:
+        logging.error(f"Erreur fermeture DB: {e}")
+
+    await bot.close()
+
+# ---------------- MAIN ----------------
+def main():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(
+            sig,
+            lambda: asyncio.create_task(shutdown())
+        )
+
+    try:
+        loop.run_until_complete(start_bot())
+    except KeyboardInterrupt:
+        pass
+    finally:
+        loop.run_until_complete(loop.shutdown_asyncgens())
+        loop.close()
 
 # ---------------- EXEC ----------------
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logging.info("Arrêt manuel du bot.")
-    except Exception as e:
-        logging.critical(f"Erreur fatale : {e}")
+    main()
