@@ -1,120 +1,103 @@
-# db_postgres.py
 import asyncpg
 import os
-from datetime import datetime
+import logging
+from datetime import datetime, timezone
 
-SNIPE_EXPIRATION = int(os.getenv("SNIPE_EXPIRATION", 86400))
+log = logging.getLogger(__name__)
 
 
 class DatabasePG:
-    """Gestion PostgreSQL pour le bot Discord"""
-
     def __init__(self, pool: asyncpg.Pool):
         self.pool = pool
 
-    @staticmethod
-    async def create(database_url: str):
-        """
-        Initialise PostgreSQL et retourne une instance DatabasePG
-        """
-        pool = await asyncpg.create_pool(database_url)
-        db = DatabasePG(pool)
+    # =========================
+    # INIT / CONNEXION
+    # =========================
+    @classmethod
+    async def create(cls):
+        database_url = os.getenv("DATABASE_URL")
 
-        async with pool.acquire() as conn:
-            await conn.execute("""
-            CREATE TABLE IF NOT EXISTS warns (
-                guild_id BIGINT,
-                member_id BIGINT,
-                reason TEXT,
-                staff BIGINT,
-                date TIMESTAMP
-            );
-            """)
+        if not database_url:
+            raise RuntimeError("❌ DATABASE_URL manquant dans l'environnement")
 
-            await conn.execute("""
-            CREATE TABLE IF NOT EXISTS mutes (
-                guild_id BIGINT,
-                member_id BIGINT,
-                reason TEXT,
-                staff BIGINT,
-                date TIMESTAMP
-            );
-            """)
+        log.info("🔄 Connexion à PostgreSQL...")
 
-            await conn.execute("""
-            CREATE TABLE IF NOT EXISTS logs (
-                guild_id BIGINT,
-                log_type TEXT,
-                channel_id BIGINT,
-                PRIMARY KEY (guild_id, log_type)
-            );
-            """)
+        pool = await asyncpg.create_pool(
+            dsn=database_url,
+            min_size=1,
+            max_size=5,
+            command_timeout=60,
+        )
 
-            await conn.execute("""
-            CREATE TABLE IF NOT EXISTS welcome (
-                guild_id BIGINT PRIMARY KEY,
-                channel_id BIGINT,
-                message TEXT,
-                embed JSONB,
-                enabled BOOLEAN DEFAULT TRUE
-            );
-            """)
+        self = cls(pool)
+        await self._init_tables()
 
-            await conn.execute("""
-            CREATE TABLE IF NOT EXISTS verification (
-                guild_id BIGINT PRIMARY KEY,
-                role_valid BIGINT,
-                isolation_role BIGINT,
-                title TEXT,
-                description TEXT,
-                button_text TEXT,
-                message_id BIGINT,
-                emoji TEXT,
-                tries JSONB DEFAULT '{}'::jsonb
-            );
-            """)
+        log.info("✅ PostgreSQL prêt")
+        return self
 
-            await conn.execute("""
-            CREATE TABLE IF NOT EXISTS partner (
-                guild_id BIGINT PRIMARY KEY,
-                role_id BIGINT,
-                channel_id BIGINT
-            );
-            """)
+    async def close(self):
+        await self.pool.close()
 
-            await conn.execute("""
-            CREATE TABLE IF NOT EXISTS snipes (
-                channel_id BIGINT PRIMARY KEY,
-                author BIGINT,
-                content TEXT,
-                timestamp BIGINT
-            );
-            """)
-
-        return db
-
-    # ---------- SNIPES ----------
-    async def set_snipe(self, channel_id, author_id, content):
+    # =========================
+    # TABLES
+    # =========================
+    async def _init_tables(self):
         async with self.pool.acquire() as conn:
             await conn.execute("""
-            INSERT INTO snipes (channel_id, author, content, timestamp)
-            VALUES ($1,$2,$3,$4)
-            ON CONFLICT (channel_id)
-            DO UPDATE SET author=$2, content=$3, timestamp=$4;
-            """, channel_id, author_id, content, int(datetime.utcnow().timestamp()))
+                CREATE TABLE IF NOT EXISTS snipes (
+                    id SERIAL PRIMARY KEY,
+                    guild_id BIGINT NOT NULL,
+                    channel_id BIGINT NOT NULL,
+                    author_id BIGINT NOT NULL,
+                    content TEXT,
+                    created_at TIMESTAMPTZ NOT NULL
+                );
+            """)
 
-    async def get_snipe(self, channel_id):
+    # =========================
+    # SNIPE
+    # =========================
+    async def add_snipe(self, guild_id, channel_id, author_id, content):
         async with self.pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT * FROM snipes WHERE channel_id=$1;", channel_id
+            await conn.execute("""
+                INSERT INTO snipes (guild_id, channel_id, author_id, content, created_at)
+                VALUES ($1, $2, $3, $4, $5)
+            """,
+            guild_id,
+            channel_id,
+            author_id,
+            content,
+            datetime.now(timezone.utc)
             )
-            if not row:
-                return None
 
-            if int(datetime.utcnow().timestamp()) - row["timestamp"] > SNIPE_EXPIRATION:
-                await conn.execute(
-                    "DELETE FROM snipes WHERE channel_id=$1;", channel_id
-                )
-                return None
+    async def get_last_snipe(self, guild_id, channel_id):
+        async with self.pool.acquire() as conn:
+            return await conn.fetchrow("""
+                SELECT author_id, content, created_at
+                FROM snipes
+                WHERE guild_id = $1 AND channel_id = $2
+                ORDER BY created_at DESC
+                LIMIT 1
+            """, guild_id, channel_id)
 
-            return row
+    # =========================
+    # CLEANUP AUTOMATIQUE
+    # =========================
+    async def cleanup_snipes(self):
+        expiration = int(os.getenv("SNIPE_EXPIRATION", 86400))
+        async with self.pool.acquire() as conn:
+            await conn.execute("""
+                DELETE FROM snipes
+                WHERE created_at < NOW() - ($1 || ' seconds')::interval
+            """, expiration)
+
+    # =========================
+    # UTILS
+    # =========================
+    async def ping(self) -> bool:
+        try:
+            async with self.pool.acquire() as conn:
+                await conn.execute("SELECT 1")
+            return True
+        except Exception:
+            return False
