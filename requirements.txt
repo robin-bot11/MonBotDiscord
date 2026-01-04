@@ -7,9 +7,6 @@ PyNaCl==1.5.0
 # Requêtes HTTP asynchrones pour discord.py
 aiohttp==3.9.4
 
-# Base de données légère et facile pour stockage JSON
-tinydb==4.7.0
-
 # Gestion avancée des logs
 loguru==0.7.0
 
