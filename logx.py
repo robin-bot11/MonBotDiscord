@@ -37,7 +37,7 @@ class Logx(commands.Cog):
 
     async def _set_log_channel(self, ctx, log_type, channel: discord.TextChannel):
         if not ctx.author.guild_permissions.administrator:
-            return await ctx.send("⛔ Tu dois être admin pour configurer les logs.")
+            return await ctx.send("⛔ Tu dois être administrateur pour configurer les logs.")
         if not self.db:
             return await ctx.send("❌ La base de données n'est pas configurée.")
         self.db.set_log_channel(ctx.guild.id, log_type, channel.id)
@@ -79,90 +79,90 @@ class Logx(commands.Cog):
         if not message.guild or message.author.bot:
             return
         moderator, _ = await self.get_audit_user(message.guild, discord.AuditLogAction.message_delete, message.author.id)
-        embed = discord.Embed(title="🗑️ Message deleted", color=COLOR)
-        embed.add_field(name="Member", value=message.author, inline=False)
-        embed.add_field(name="Deleted by", value=moderator or "Unknown", inline=False)
-        embed.add_field(name="Channel", value=message.channel.mention, inline=False)
-        embed.add_field(name="Content", value=message.content or "*Embed / file*", inline=False)
+        embed = discord.Embed(title="🗑️ Message supprimé", color=COLOR)
+        embed.add_field(name="Membre", value=message.author, inline=False)
+        embed.add_field(name="Supprimé par", value=moderator or "Inconnu", inline=False)
+        embed.add_field(name="Salon", value=message.channel.mention, inline=False)
+        embed.add_field(name="Contenu", value=message.content or "*Embed / fichier*", inline=False)
         await self.send_log(message.guild, "log_message", embed)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before, after):
         if before.author.bot or before.content == after.content:
             return
-        embed = discord.Embed(title="✏️ Message edited", color=COLOR)
-        embed.add_field(name="Member", value=before.author, inline=False)
-        embed.add_field(name="Channel", value=before.channel.mention, inline=False)
-        embed.add_field(name="Before", value=before.content or "—", inline=False)
-        embed.add_field(name="After", value=after.content or "—", inline=False)
+        embed = discord.Embed(title="✏️ Message modifié", color=COLOR)
+        embed.add_field(name="Membre", value=before.author, inline=False)
+        embed.add_field(name="Salon", value=before.channel.mention, inline=False)
+        embed.add_field(name="Avant", value=before.content or "—", inline=False)
+        embed.add_field(name="Après", value=after.content or "—", inline=False)
         await self.send_log(before.guild, "log_message", embed)
 
     # -------------------- LOG MOD --------------------
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
         moderator, reason = await self.get_audit_user(guild, discord.AuditLogAction.ban, user.id)
-        embed = discord.Embed(title="🔨 Member banned", color=COLOR)
-        embed.add_field(name="Member", value=user, inline=False)
-        embed.add_field(name="Moderator", value=moderator or "Unknown", inline=False)
-        embed.add_field(name="Reason", value=reason or "None", inline=False)
+        embed = discord.Embed(title="🔨 Membre banni", color=COLOR)
+        embed.add_field(name="Membre", value=user, inline=False)
+        embed.add_field(name="Modérateur", value=moderator or "Inconnu", inline=False)
+        embed.add_field(name="Raison", value=reason or "Aucune", inline=False)
         await self.send_log(guild, "log_mod", embed)
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
         moderator, _ = await self.get_audit_user(member.guild, discord.AuditLogAction.kick, member.id)
         if moderator:
-            embed = discord.Embed(title="👢 Member kicked", color=COLOR)
-            embed.add_field(name="Member", value=member, inline=False)
-            embed.add_field(name="Moderator", value=moderator, inline=False)
+            embed = discord.Embed(title="👢 Membre kick", color=COLOR)
+            embed.add_field(name="Membre", value=member, inline=False)
+            embed.add_field(name="Modérateur", value=moderator, inline=False)
             await self.send_log(member.guild, "log_mod", embed)
 
     # -------------------- WARN / MUTE / DEMUTE --------------------
     async def log_warn(self, guild, member, moderator, reason):
-        """Logger un warn"""
-        embed = discord.Embed(title="⚠️ Member warned", color=COLOR)
-        embed.add_field(name="Member", value=member, inline=False)
-        embed.add_field(name="Moderator", value=moderator, inline=False)
-        embed.add_field(name="Reason", value=reason, inline=False)
+        """Logger un avertissement"""
+        embed = discord.Embed(title="⚠️ Membre averti", color=COLOR)
+        embed.add_field(name="Membre", value=member, inline=False)
+        embed.add_field(name="Modérateur", value=moderator, inline=False)
+        embed.add_field(name="Raison", value=reason, inline=False)
         await self.send_log(guild, "log_mod", embed)
 
     async def log_mute(self, guild, member, moderator, reason=None):
         """Logger un mute"""
-        embed = discord.Embed(title="🔇 Member muted", color=COLOR)
-        embed.add_field(name="Member", value=member, inline=False)
-        embed.add_field(name="Moderator", value=moderator, inline=False)
-        embed.add_field(name="Reason", value=reason or "None", inline=False)
+        embed = discord.Embed(title="🔇 Membre mute", color=COLOR)
+        embed.add_field(name="Membre", value=member, inline=False)
+        embed.add_field(name="Modérateur", value=moderator, inline=False)
+        embed.add_field(name="Raison", value=reason or "Aucune", inline=False)
         await self.send_log(guild, "log_mod", embed)
 
     async def log_demute(self, guild, member, moderator):
         """Logger un demute"""
-        embed = discord.Embed(title="🔊 Member unmuted", color=COLOR)
-        embed.add_field(name="Member", value=member, inline=False)
-        embed.add_field(name="Moderator", value=moderator, inline=False)
+        embed = discord.Embed(title="🔊 Membre unmute", color=COLOR)
+        embed.add_field(name="Membre", value=member, inline=False)
+        embed.add_field(name="Modérateur", value=moderator, inline=False)
         await self.send_log(guild, "log_mod", embed)
 
     # -------------------- LOG ROLES & MEMBERS --------------------
     @commands.Cog.listener()
     async def on_guild_role_create(self, role):
         moderator, _ = await self.get_audit_user(role.guild, discord.AuditLogAction.role_create, role.id)
-        embed = discord.Embed(title="➕ Role created", color=COLOR)
-        embed.add_field(name="Role", value=role.name, inline=False)
-        embed.add_field(name="By", value=moderator or "Unknown", inline=False)
+        embed = discord.Embed(title="➕ Rôle créé", color=COLOR)
+        embed.add_field(name="Rôle", value=role.name, inline=False)
+        embed.add_field(name="Par", value=moderator or "Inconnu", inline=False)
         await self.send_log(role.guild, "log_role", embed)
 
     @commands.Cog.listener()
     async def on_guild_role_delete(self, role):
         moderator, _ = await self.get_audit_user(role.guild, discord.AuditLogAction.role_delete, role.id)
-        embed = discord.Embed(title="➖ Role deleted", color=COLOR)
-        embed.add_field(name="Role", value=role.name, inline=False)
-        embed.add_field(name="By", value=moderator or "Unknown", inline=False)
+        embed = discord.Embed(title="➖ Rôle supprimé", color=COLOR)
+        embed.add_field(name="Rôle", value=role.name, inline=False)
+        embed.add_field(name="Par", value=moderator or "Inconnu", inline=False)
         await self.send_log(role.guild, "log_role", embed)
 
     @commands.Cog.listener()
     async def on_guild_role_update(self, before, after):
         moderator, _ = await self.get_audit_user(after.guild, discord.AuditLogAction.role_update, after.id)
-        embed = discord.Embed(title="✏️ Role updated", color=COLOR)
-        embed.add_field(name="Role", value=f"{before.name} → {after.name}", inline=False)
-        embed.add_field(name="By", value=moderator or "Unknown", inline=False)
+        embed = discord.Embed(title="✏️ Rôle modifié", color=COLOR)
+        embed.add_field(name="Rôle", value=f"{before.name} → {after.name}", inline=False)
+        embed.add_field(name="Par", value=moderator or "Inconnu", inline=False)
         await self.send_log(after.guild, "log_role", embed)
 
     @commands.Cog.listener()
@@ -172,25 +172,25 @@ class Logx(commands.Cog):
         removed = set(before.roles) - set(after.roles)
 
         if added:
-            embed = discord.Embed(title="➕ Role added", color=COLOR)
-            embed.add_field(name="Member", value=after.mention, inline=False)
-            embed.add_field(name="Role", value=", ".join(r.name for r in added if r.name != "@everyone"), inline=False)
-            embed.add_field(name="By", value=moderator or "Unknown", inline=False)
+            embed = discord.Embed(title="➕ Rôle ajouté", color=COLOR)
+            embed.add_field(name="Membre", value=after.mention, inline=False)
+            embed.add_field(name="Rôle", value=", ".join(r.name for r in added if r.name != "@everyone"), inline=False)
+            embed.add_field(name="Par", value=moderator or "Inconnu", inline=False)
             await self.send_log(after.guild, "log_member", embed)
 
         if removed:
-            embed = discord.Embed(title="➖ Role removed", color=COLOR)
-            embed.add_field(name="Member", value=after.mention, inline=False)
-            embed.add_field(name="Role", value=", ".join(r.name for r in removed if r.name != "@everyone"), inline=False)
-            embed.add_field(name="By", value=moderator or "Unknown", inline=False)
+            embed = discord.Embed(title="➖ Rôle retiré", color=COLOR)
+            embed.add_field(name="Membre", value=after.mention, inline=False)
+            embed.add_field(name="Rôle", value=", ".join(r.name for r in removed if r.name != "@everyone"), inline=False)
+            embed.add_field(name="Par", value=moderator or "Inconnu", inline=False)
             await self.send_log(after.guild, "log_member", embed)
 
         if before.display_name != after.display_name:
-            embed = discord.Embed(title="✏️ Member nickname changed", color=COLOR)
-            embed.add_field(name="Member", value=after.mention, inline=False)
-            embed.add_field(name="Before", value=before.display_name, inline=False)
-            embed.add_field(name="After", value=after.display_name, inline=False)
-            embed.add_field(name="By", value=moderator or "Unknown", inline=False)
+            embed = discord.Embed(title="✏️ Pseudo modifié", color=COLOR)
+            embed.add_field(name="Membre", value=after.mention, inline=False)
+            embed.add_field(name="Avant", value=before.display_name, inline=False)
+            embed.add_field(name="Après", value=after.display_name, inline=False)
+            embed.add_field(name="Par", value=moderator or "Inconnu", inline=False)
             await self.send_log(after.guild, "log_member", embed)
 
 # -------------------- Setup --------------------
