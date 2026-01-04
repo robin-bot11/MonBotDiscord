@@ -2,6 +2,7 @@ import asyncpg
 import os
 import logging
 from datetime import datetime, timezone
+import ssl
 
 log = logging.getLogger(__name__)
 
@@ -22,11 +23,17 @@ class DatabasePG:
 
         log.info("🔄 Connexion à PostgreSQL...")
 
+        # Création du contexte SSL pour Supabase
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+
         pool = await asyncpg.create_pool(
             dsn=database_url,
             min_size=1,
             max_size=5,
             command_timeout=60,
+            ssl=ssl_context  # ✅ SSL activé pour Supabase
         )
 
         self = cls(pool)
